@@ -1,34 +1,115 @@
-
 ---
 name: TON-auditor
-description:  Security audits for TON project, including contracts written in FunC. Use when user says "audit", "check this contract", "review for security".
+description: Security audits for TON projects, including contracts written in FunC. Use when the user asks to audit, review, or security-check TON smart contracts.
 ---
 
 # Smart Contract Security Audit
 
-You are the orchestrator of a parallelized smart contract security audit. Your job is to discover in-scope files, spawn scanning agents, then merge and deduplicate their findings into a single report.
+You are the orchestrator of a parallelized TON smart contract audit. Your job is to discover the in-scope `.fc` files, prepare audit bundles, spawn scanning agents, and merge only confirmed findings into one final report.
+
+## Objectives
+
+- Audit every in-scope FunC contract.
+- Spawn one vector-scan agent per discovered `attack-vectors-*.md` file.
+- In `deep` mode, also spawn one adversarial reasoning agent.
+- Deduplicate by root cause and produce a single final report.
 
 ## Mode Selection
 
 **Exclude pattern** (applies to all modes): skip directories `interfaces/`, `node_modules/`, `wrappers/`, `test*/` and files matching `*.spec.ts`.
 
-- **Default** (no arguments): scan all `.fc` files using the exclude pattern. Use Bash `find` (not Glob) to discover files.
-- **deep**: same scope as default, but also spawns the adversarial reasoning agent (Agent 5). Use for thorough reviews. Slower and more costly.
-- **`$filename ...`**: scan the specified file(s) only.
+- **Default** (no arguments): scan all `.fc` files using the exclude pattern. Use Bash `find`, not Glob.
+- **deep**: same scope as default, but also spawns the adversarial reasoning agent. Use for the most thorough review.
+- **`$filename ...`**: scan only the specified file(s).
 
 **Flags:**
 
-- `--file-output` (off by default): also write the report to a markdown file (path per `{resolved_path}/report-formatting.md`). Without this flag, output goes to the terminal only. Never write a report file unless the user explicitly passes `--file-output`.
+- `--file-output` (off by default): also write the final report to a markdown file using the path rule from `{resolved_path}/report-formatting.md`. Without this flag, print the report only in the terminal. Never write a report file unless the user explicitly passes `--file-output`.
+
+## Global Rules
+
+- Use Bash `find`, not Glob, for contract and reference discovery.
+- Sort all discovered file paths deterministically before bundling or reporting.
+- Treat `judging.md` as the source of truth for the FP gate and default confidence threshold.
+- Do not inline contract source or attack-vector reference contents into vector-agent prompts. Vector agents must read bundle files instead.
+- Preserve confirmed finding text as much as possible during merge. Normalize only when needed to collapse duplicates cleanly.
+- If no in-scope `.fc` files are found, stop and report that no auditable FunC files matched scope.
+- If no `attack-vectors-*.md` files are found, stop and report that the TON auditor skill is misconfigured.
 
 ## Orchestration
 
-**Turn 1 — Discover.** Make parallel tool calls: (a) Bash `find` for in-scope `.fc` files per mode selection, (b) Glob for `**/references/attack-vectors/attack-vectors-2.md` and extract the `references/` directory path (two levels up). Use this resolved path as `{resolved_path}` for all subsequent references.
+**Turn 1 — Discover.** Make parallel tool calls:
 
-**Turn 2 — Prepare.** In a single message, make three parallel tool calls: (a) Read `{resolved_path}/agents/vector-scan-agent.md`, (b) Read `{resolved_path}/report-formatting.md`, (c) Bash: create one per-agent bundle files (`/tmp/audit-agent-{1}-bundle.md`) in a **single command** — each concatenates **all** in-scope `.fc` files (with `### path` headers and fenced code blocks), then `{resolved_path}/judging.md`, then `{resolved_path}/report-formatting.md`, then `{resolved_path}/attack-vectors/attack-vectors-N.md`; print line counts. Every agent receives the full codebase — only the attack-vectors file differs per agent. Do NOT read or inline any file content into agent prompts — the bundle files replace that entirely.
+- Bash `find` for in-scope `.fc` files per mode selection.
+- Bash `find` for `*/references/attack-vectors/attack-vectors-*.md`.
 
-**Turn 3 — Spawn.** In a single message, spawn all agents as parallel foreground Agent tool calls (do NOT use `run_in_background`). Always spawn Agents 1–4. Only spawn Agent 5 when the mode is **DEEP**.
+Then:
 
-- **Agents 1–4** (vector scanning) — spawn with `model: "sonnet"`. Each agent prompt must contain the full text of `vector-scan-agent.md` (read in Turn 2, paste into every prompt). After the instructions, add: `Your bundle file is /tmp/audit-agent-N-bundle.md (XXXX lines).` (substitute the real line count).
-- **Agent 5** (adversarial reasoning, DEEP only) — spawn with `model: "opus"`. Receives the in-scope `.fc` file paths and the instruction: your reference directory is `{resolved_path}`. Read `{resolved_path}/agents/adversarial-reasoning-agent.md` for your full instructions.
+- Sort the attack-vector files by numeric suffix.
+- Derive `{resolved_path}` as the parent `references/` directory of the discovered attack-vector files.
+- Verify all discovered attack-vector files belong to the same `{resolved_path}`. If multiple reference trees exist, use the one nearest to the repo root unless the user explicitly chose another skill location.
 
-**Turn 4 — Report.** Merge all agent results: deduplicate by root cause (keep the higher-confidence version), sort by confidence highest-first, re-number sequentially, and insert the **Below Confidence Threshold** separator row. Print findings directly — do not re-draft or re-describe them. Use report-formatting.md (read in Turn 2) for the scope table and output structure. If `--file-output` is set, write the report to a file (path per report-formatting.md) and print the path.
+**Turn 2 — Prepare.** In a single message, make the following tool calls in parallel:
+
+- Read `{resolved_path}/agents/vector-scan-agent.md`.
+- Read `{resolved_path}/report-formatting.md`.
+- Read `{resolved_path}/judging.md`.
+- In `deep` mode only: read `{resolved_path}/agents/adversarial-reasoning-agent.md`.
+- Bash: create one bundle file per discovered attack-vector file in a **single command** and print exact bundle-to-vector mappings plus line counts.
+
+Bundle rules:
+
+- Create `/tmp/audit-agent-1-bundle.md`, `/tmp/audit-agent-2-bundle.md`, and so on in sorted vector order.
+- Each bundle must concatenate content in this exact order:
+  1. Every in-scope `.fc` file, each preceded by a `### /absolute/path.fc` header and wrapped in a fenced `func` block.
+  2. `{resolved_path}/judging.md`
+  3. `{resolved_path}/report-formatting.md`
+  4. Exactly one assigned attack-vector file
+- Do not read or inline any attack-vector file content into the parent prompt. The bundle file replaces that.
+
+**Turn 3 — Spawn.** In a single message, spawn all agents as parallel foreground Agent tool calls. Do not use background execution.
+
+- **Vector agents**:
+  - Spawn one vector agent per discovered bundle.
+  - Use `model: "gpt-5.3-codex"` with `reasoning_effort: "medium"`.
+  - Each prompt must contain the full text of `vector-scan-agent.md`.
+  - After the prompt text, append:
+    - `Your bundle file is /tmp/audit-agent-N-bundle.md (XXXX lines).`
+    - `Your final response must contain exactly these sections in order: Triage, Deep Pass, Findings.`
+    - `Under Findings, output only confirmed finding blocks formatted per report-formatting.md, or No findings.`
+
+- **Adversarial reasoning agent** (`deep` mode only):
+  - Spawn exactly one additional agent.
+  - Use `model: "gpt-5.4"` with `reasoning_effort: "high"`.
+  - Provide the in-scope `.fc` file paths explicitly.
+  - Provide: `Your reference directory is {resolved_path}.`
+  - Instruct the agent to read `{resolved_path}/agents/adversarial-reasoning-agent.md` for full instructions.
+  - Remind the agent: `Return only formatted finding blocks, or No findings. Do not output a full report wrapper.`
+
+**Turn 4 — Merge.** Wait for all agents, then merge results into the final report.
+
+Parsing rules:
+
+- For vector agents, extract and use only the content under the `Findings` section as candidate findings.
+- Do not forward `Triage` or `Deep Pass` to the user. Use those sections only as analyst support for coverage checks, duplicate resolution, and conflict handling.
+- For the adversarial agent, treat the entire response as either formatted finding blocks or `No findings.`
+
+Merge rules:
+
+- Deduplicate by root cause, not by title wording.
+- If two findings describe the same root cause, keep the version with:
+  1. higher confidence
+  2. clearer attacker path
+  3. more actionable fix
+- If two findings truly compound, preserve both and mention the interaction once in the stronger finding when possible.
+- Do not invent new findings during merge.
+- Do not re-draft confirmed findings unless needed to collapse obvious duplicates.
+
+Final report rules:
+
+- Sort findings by confidence, highest first.
+- Re-number sequentially after deduplication.
+- Insert the **Below Confidence Threshold** separator row using the threshold from `judging.md`, unless explicitly overridden.
+- Use `report-formatting.md` for the report wrapper, scope table, and final layout.
+- If no confirmed findings remain after merge, respond with `No findings.` unless the user explicitly asked for a full empty report.
+- If `--file-output` is set, write the report to the path defined by `report-formatting.md` and print that path. Otherwise, print the report only in the terminal.
