@@ -19,6 +19,39 @@ Every finding must pass all three checks. If any check fails, drop the finding i
    Check `throw_unless`, sender validation, `if`-revert branches, bounce filters, `seqno` checks, init flags, state locks, and equivalent guard logic.
    If a real guard blocks the exploit under the claimed path, drop the finding.
 
+## Direct-Pattern Presumptions
+
+The following exact code-level anti-patterns are not mere style issues. If caller-controlled input reaches them, including role-gated or otherwise privileged caller input, and they influence authorization, state mutation, or outbound message behavior, they usually satisfy FP gate 1 unless a real guard defeats the path:
+
+- authorization based on an address parsed from `in_msg_body` or another attacker-controlled payload field instead of the trusted inbound sender context
+- fixed-layout slice parsers that never prove full consumption when the parsed cell or sub-slice is expected to be exact and its values influence authorization, state changes, or downstream messages
+- optimistic accounting or liquidity mutation before a dependent ignored-error downstream crediting or deployment message
+- a native-only or jetton-only entrypoint that never verifies the configured asset mode or sentinel before crediting value in that mode
+- threshold-signature or verifier-set authorization that never proves a minimum number of unique valid signers, or traverses the signature container incorrectly
+- adjacent same-typed state or serialization helper arguments passed in a different order from the helper signature
+- a value-bearing inbound path that accepts or credits the asset first, then swallows a later failure via `catch` / early `return` without refunding or rolling back
+- an owner/admin withdrawal or rescue path that uses gross balance instead of free balance after reserved or unclaimed obligations
+- authoritative supply or settlement state committed before a dependent wallet-side mint, burn, or transfer consequence is confirmed, with no authoritative bounce recovery
+- a caller-supplied nested internal message ref such as `master_msg` forwarded to a wallet or peer contract without validating opcode, correlated amount, or exact schema
+
+These patterns may still fail FP gate 2 or 3 if the attacker cannot reach the entrypoint or another guard already neutralizes the bug. If the path is reachable only by a privileged caller, keep the finding and apply the privileged-caller confidence deduction instead of dropping it solely because the caller is role-gated.
+
+For the second pattern, you do **not** need to prove a fully custom byte-level exploit beyond the leftover data itself. If the parser is fixed-layout, caller-influenced, and its decoded values participate in authorization, accounting, configuration, or outbound message construction, the unvalidated trailing data is itself a concrete integrity break and should normally be reportable. Broken schema or message-shape invariants count as a broken invariant even when the immediate consequence is malformed-state acceptance or unsafe downstream message construction rather than instant fund loss. A pure `slice_bits(...) == N` check is not enough when refs may still remain.
+
+For the third and fourth patterns, you do not need a separate exotic exploit primitive beyond the reachable message path. If the contract saves a balance, liquidity, quota, or entitlement update before an ignored-error consequence send that is required to mirror that update, or if a mode-specific asset entrypoint accepts value without verifying the active asset configuration, that is normally a concrete broken-invariant path.
+
+For the fifth pattern, it is enough to show that the signature gate can be satisfied without the intended `k-of-n` unique-verifier property. A broken traversal loop, missing threshold check, or duplicate-verifier acceptance is itself a concrete authorization bypass.
+
+For the sixth pattern, it is enough to show that the call-site argument order no longer matches the authoritative helper signature and that the affected fields influence balances, fees, thresholds, addresses, or other security-relevant state. You do not need a second exotic exploit primitive beyond the reachable state mutation.
+
+For the seventh pattern, it is enough to show that the contract has already accepted or credited user value before the swallowed failure point, and that the failure path neither refunds the asset nor reverses the accounting. An empty or effectively no-op `catch` on a deposit path is not harmless if user value has already moved.
+
+For the eighth pattern, it is enough to show that the contract separately tracks reserved, unclaimed, or claimable obligations and that the withdrawal path ignores them when computing the transferable amount. A privileged caller requirement reduces confidence but does not turn the issue into a mere trust-model note when users can be locked out of already-accounted entitlements.
+
+For the ninth pattern, it is enough to show that the authoritative contract records supply, balance, liquidity, or entitlement before the dependent peer-side state transition is known to have succeeded, and that the authoritative layer either ignores the bounce or lacks another reconciliation path. You do not need a second exotic exploit primitive beyond the reachable message cascade.
+
+For the tenth pattern, it is enough to show that the forwarded nested cell remains caller-influenced and that the contract does not prove the forwarded opcode, amount, or layout matches the outer request it just authorized. A privileged mint or admin path reduces confidence but does not make this a style issue.
+
 ## Confidence Score
 
 Confidence measures how certain you are that the finding is real and exploitable.
@@ -47,6 +80,11 @@ Default confidence threshold: **75**
 
 - Report the **root cause**, not every downstream symptom.
 - Do not report the same root cause twice under slightly different titles.
+- Do not merge distinct code-level root causes merely because they appear in the same function, parse the same message, or participate in the same business flow.
+- Preserve separate findings when the exploit mechanism or fix is different.
+  Example: payload-derived sender authorization, missing `end_parse()` on a fixed-layout nested parser, and forwarding an unvalidated nested message cell are distinct root causes even if they occur in one handler.
+  Example: a native-mode asset-configuration bypass and an optimistic ignored-error downstream credit desync are distinct root causes even if both occur in the same liquidity handler.
+  Example: unvalidated forwarding of a caller-supplied nested `master_msg` and minter-side `total_supply` desync after wallet-side mint failure are distinct root causes even if both occur in the same `op::mint` handler.
 - If two findings compound, keep both only when they are meaningfully distinct; otherwise keep the stronger root-cause version.
 - If you cannot explain the exploit path in concrete terms, drop the finding.
 

@@ -15,8 +15,8 @@ Save the report to `assets/findings/{project-name}-ai-audit-report-{timestamp}.m
 
 |                                  |                                                        |
 | -------------------------------- | ------------------------------------------------------ |
-| **Mode**                         | ALL / default / filename                               |
-| **Files reviewed**               | `File1.sol` · `File2.sol`<br>`File3.sol` · `File4.sol` | <!-- list every file, 3 per line -->
+| **Mode**                         | ALL / default / deep / filename                        |
+| **Files reviewed**               | `file1.fc` · `file2.fc`<br>`file3.fc` · `file4.fc`     | <!-- list every file, 3 per line -->
 | **Confidence threshold (1-100)** | N                                                      |
 
 ---
@@ -73,5 +73,4 @@ Findings List
 
 ````
 
-**Rules:** Follow the template above exactly. Sort findings by confidence (highest first). Findings below the threshold get a description but no **Fix** block. Draft findings directly in report format — do not re-generate.
-
+**Rules:** Follow the template above exactly. Sort findings by confidence (highest first). Findings below the threshold get a description but no **Fix** block. Draft findings directly in report format and keep FunC/TON terminology.
