@@ -61,6 +61,7 @@ Read `judging.md`, `report-formatting.md`, `standards-and-lessons.md`, and `secu
 - Use placeholder sequential numbering (`1.`, `2.`, `3.`).
 - Keep `Description` to one short sentence.
 - If a finding is confirmed because of a concrete alias pattern, name that concrete pattern explicitly in the title or first sentence of `Description`.
+- If you confirm a V25-style finding, name the exact parser site or reused payload variable in the title or first sentence of `Description`.
 - Include a `Fix` block only when the finding is at or above the threshold from `judging.md`.
 
 ## Heuristics
@@ -81,12 +82,16 @@ Read `judging.md`, `report-formatting.md`, `standards-and-lessons.md`, and `secu
   - selector sub-dispatch that accepts unsupported `child_op`-style values without reverting
   - authoritative supply or settlement state committed before a dependent wallet-side mint, burn, or `internal_transfer` is known to have succeeded, with no authoritative bounce recovery
   - a caller-supplied nested message ref such as `master_msg` forwarded directly into a wallet or peer message after only partial parsing
+  - a privileged mint or admin path that parses a nested peer-message body but never explicitly verifies the nested opcode before relying on or forwarding that body
 - For fixed-layout missing-`end_parse()` cases, privilege on the caller path lowers confidence but does not by itself make the issue unreachable.
+- If a reachable fixed-layout parser should end with `end_parse()` and there is no equivalent emptiness proof, keep that finding alive even if the leftover bytes or refs are not separately consumed later; the accepted malformed message shape is already the broken invariant.
+- Apply the same rule to authoritative storage loaders such as `load_data()` from `get_data().begin_parse()` when reachable state-changing handlers rely on them and the storage layout is intended exact; that storage-variant finding is weaker, but still not mere style.
 - Be especially suspicious of:
   - authorization logic that loads a supposed sender or owner address from `in_msg_body` instead of the trusted inbound message context
   - sender checks that trust user-supplied addresses instead of derived wallet addresses
   - nested dispatch on selector fields such as `child_op` that accepts unsupported values without reverting or otherwise signaling failure
   - nested `begin_parse()` flows on refs, helper cells, or storage groups that never call `end_parse()` despite expecting a fixed layout
+  - top-level `load_data()` helpers that parse a fixed storage layout from `get_data().begin_parse()` but never prove the slice is fully consumed
   - payload slices that only check `slice_bits(...)` before decoding fixed-layout addresses or fields, without proving there are no leftover refs
   - native-liquidity or jetton-liquidity paths that share one pool variable but never verify the active asset-mode configuration before crediting providers
   - state updates saved before `SEND_MODE_IGNORE_ERRORS` consequence messages that are supposed to mirror those updates in per-user helper accounts
@@ -100,6 +105,7 @@ Read `judging.md`, `report-formatting.md`, `standards-and-lessons.md`, and `secu
   - state mutations before fallible sends
   - minter code that updates `total_supply` from a parsed nested cell before the downstream wallet mint path is confirmed, especially when bounced messages are ignored
   - mint or admin handlers that parse one field from `master_msg` or a similar nested ref but still forward the whole caller-supplied cell unchanged
+  - mint or admin handlers that skip over the nested opcode tag and rely on later fields without ever asserting the nested message is the intended standard operation
   - `accept_message()` before replay protection is committed
   - balance or supply changes that rely on later success
   - short-form internal message prefixes serialized incorrectly

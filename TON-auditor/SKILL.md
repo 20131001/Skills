@@ -108,6 +108,8 @@ Parsing rules:
 - Do not forward `Triage` or `Deep Pass` to the user. Use those sections only as analyst support for coverage checks, duplicate resolution, and conflict handling.
 - For the adversarial agent, treat the entire response as either formatted finding blocks or `No findings.`
 - During merge, treat a confirmed fixed-layout `begin_parse()` / missing `end_parse()` issue as a distinct parser-integrity finding. Do not absorb it into a broader auth, mint, forwarding, or standards-mismatch finding unless the exploit mechanism and local fix are truly identical.
+- If an agent confirms V25, do not discard it solely because the impact is framed as malformed-shape acceptance or broken parser integrity rather than immediate fund loss. Preserve one finding per distinct parser root cause after normal deduplication.
+- Apply the same preservation rule to top-level storage-loader V25 cases such as `load_data()`; these may be lower-confidence findings, but they should not be dropped as mere style if multiple reachable handlers rely on the exact storage layout.
 
 Merge rules:
 

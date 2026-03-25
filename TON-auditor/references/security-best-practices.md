@@ -75,7 +75,8 @@ Consult this file whenever the audited code includes any of the following:
 - Flat storage layouts with very large `load_data()` / `save_data()` argument lists are high risk because they encourage argument swaps, field shadowing, and namespace pollution.
 - When helper signatures contain many same-typed fields, compare each `save_data(...)`, `store_*`, or builder call site against the authoritative signature; swapped adjacent integers or addresses are a real state-corruption risk, not a style issue.
 - Prefer grouped or nested storage cells so unrelated state is not unpacked and repacked on every path.
-- Use `end_parse()` on message bodies and storage sub-parsers whenever the layout is expected to be fully consumed.
+- Use `end_parse()` on message bodies and storage sub-parsers whenever the layout is expected to be fully consumed. It succeeds only when the slice has been fully consumed and throws if bits or refs still remain.
+- Apply the same rule to top-level storage loaders such as `load_data()` built from `get_data().begin_parse()` when the storage layout is intended to be exact; otherwise extra serialized fields can be silently ignored after refactors, migrations, or partial layout changes.
 - Apply the same rule to nested parsers created from refs or helper cells, such as permission dictionaries, embedded payload cells, or op-specific message refs.
 - Apply the same rule to reused slices that were not created by `begin_parse()`, such as `fwd_payload = in_msg_body` or helper-returned payload slices.
 - If you gate a fixed-layout payload with `slice_bits(...) == N`, also prove there are no leftover refs, or finish with an equivalent emptiness check; exact bit length alone does not prove exact layout.

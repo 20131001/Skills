@@ -21,7 +21,7 @@ Every finding must pass all three checks. If any check fails, drop the finding i
 
 ## Direct-Pattern Presumptions
 
-The following exact code-level anti-patterns are not mere style issues. If caller-controlled input reaches them, including role-gated or otherwise privileged caller input, and they influence authorization, state mutation, or outbound message behavior, they usually satisfy FP gate 1 unless a real guard defeats the path:
+The following exact code-level anti-patterns are not mere style issues. If caller-controlled input reaches them, including role-gated or otherwise privileged caller input, and they influence authorization, state mutation, or outbound message behavior, they usually satisfy FP gate 1 unless a real guard defeats the path. For authoritative storage parsers such as top-level `load_data()` helpers built from `get_data().begin_parse()`, caller control is indirect; keep those as weaker storage-layout integrity findings when multiple reachable state-changing paths rely on the parser and the layout is intended to be exact.
 
 - authorization based on an address parsed from `in_msg_body` or another attacker-controlled payload field instead of the trusted inbound sender context
 - fixed-layout slice parsers that never prove full consumption when the parsed cell or sub-slice is expected to be exact and its values influence authorization, state changes, or downstream messages
@@ -38,6 +38,10 @@ These patterns may still fail FP gate 2 or 3 if the attacker cannot reach the en
 
 For the second pattern, you do **not** need to prove a fully custom byte-level exploit beyond the leftover data itself. If the parser is fixed-layout, caller-influenced, and its decoded values participate in authorization, accounting, configuration, or outbound message construction, the unvalidated trailing data is itself a concrete integrity break and should normally be reportable. Broken schema or message-shape invariants count as a broken invariant even when the immediate consequence is malformed-state acceptance or unsafe downstream message construction rather than instant fund loss. A pure `slice_bits(...) == N` check is not enough when refs may still remain.
 
+Do **not** apply the "Attack path is partial" deduction to this parser-integrity pattern merely because the leftover bytes or refs are not separately monetized or reinterpreted later in the same trace. If the fixed-layout parser is reachable and its decoded output influences state, authorization, configuration, or outbound message construction, the accepted malformed shape is already the completed invariant break.
+
+For top-level storage parsers such as `load_data()` from `get_data().begin_parse()`, the same root cause remains reportable at lower confidence when the helper is authoritative across reachable state-changing handlers and the layout is expected to be exact. The finding can score below the normal threshold, but do not drop it as mere style simply because the malformed shape resides in persisted storage rather than a caller message.
+
 For the third and fourth patterns, you do not need a separate exotic exploit primitive beyond the reachable message path. If the contract saves a balance, liquidity, quota, or entitlement update before an ignored-error consequence send that is required to mirror that update, or if a mode-specific asset entrypoint accepts value without verifying the active asset configuration, that is normally a concrete broken-invariant path.
 
 For the fifth pattern, it is enough to show that the signature gate can be satisfied without the intended `k-of-n` unique-verifier property. A broken traversal loop, missing threshold check, or duplicate-verifier acceptance is itself a concrete authorization bypass.
@@ -51,6 +55,8 @@ For the eighth pattern, it is enough to show that the contract separately tracks
 For the ninth pattern, it is enough to show that the authoritative contract records supply, balance, liquidity, or entitlement before the dependent peer-side state transition is known to have succeeded, and that the authoritative layer either ignores the bounce or lacks another reconciliation path. You do not need a second exotic exploit primitive beyond the reachable message cascade.
 
 For the tenth pattern, it is enough to show that the forwarded nested cell remains caller-influenced and that the contract does not prove the forwarded opcode, amount, or layout matches the outer request it just authorized. A privileged mint or admin path reduces confidence but does not make this a style issue.
+
+If the missing proof is only an explicit nested opcode check on a caller-influenced peer-message body, keep it as a weaker surviving finding when the contract still forwards that body into another contract or relies on its parsed fields. That subcase can score below the normal threshold, but it should not be dropped merely because the caller is privileged or because the stronger downstream exploit depends on additional conditions.
 
 ## Confidence Score
 
@@ -87,6 +93,8 @@ Default confidence threshold: **75**
   Example: unvalidated forwarding of a caller-supplied nested `master_msg` and minter-side `total_supply` desync after wallet-side mint failure are distinct root causes even if both occur in the same `op::mint` handler.
 - If two findings compound, keep both only when they are meaningfully distinct; otherwise keep the stronger root-cause version.
 - If you cannot explain the exploit path in concrete terms, drop the finding.
+- For V25-style parser-integrity findings, the concrete path is: caller reaches fixed-layout parser -> contract accepts malformed or trailing data without proving full consumption -> decoded values still influence authorization, state, configuration, or outbound message behavior. Do not require a second downstream exploit gadget before reporting it.
+- For storage-variant V25 findings, the concrete path is: caller reaches a state-changing handler -> handler relies on an authoritative fixed-layout storage parser such as `load_data()` -> parser silently accepts extra serialized trailing data or refs without proving exact layout. This is weaker than a caller-message parser break, but still reportable as a parser-integrity / storage-layout risk.
 
 ## Do Not Report
 

@@ -33,7 +33,7 @@ You communicate results back ONLY through your final text response.
 ## Workflow
 
 1. Read your bundle file in **parallel 1000-line chunks** on your first turn. The line count is in your prompt, so compute the offsets and issue all reads at once. Do not read without a limit. These are your ONLY file reads.
-2. Before classifying V25, perform a parser-integrity sweep over every reachable fixed-layout slice parser in the bundle, including nested `begin_parse()` sites, reused payload slices, helper-returned slices, permission/config cells, and storage subgroups. For each site, decide whether it is:
+2. Before classifying V25, perform a parser-integrity sweep over every reachable fixed-layout slice parser in the bundle, including nested `begin_parse()` sites, reused payload slices, helper-returned slices, top-level storage loaders such as `load_data()` from `get_data().begin_parse()`, permission/config cells, and storage subgroups. For each site, decide whether it is:
    - top-level envelope parsing where trailing data is handled elsewhere
    - an intentionally extensible parser with explicit trailing-data handling
    - a fixed-layout parser that should end with `end_parse()`
@@ -45,7 +45,7 @@ You communicate results back ONLY through your final text response.
    For borderline candidates, do the relevance check before classifying: if you can name the exact function and give the exploit sentence, classify as `Surviving`; otherwise classify as `Borderline`.
    Treat the following as direct matches, not weak analogies:
    - authorization based on `in_msg_body~load_msg_addr()` or another payload-derived address instead of the trusted inbound sender -> V23
-   - a fixed-layout payload slice or ref cell without a matching `end_parse()` or equivalent full-emptiness proof -> V25
+   - a fixed-layout payload slice, ref cell, or top-level storage loader without a matching `end_parse()` or equivalent full-emptiness proof -> V25
    - optimistic liquidity, balance, or entitlement mutation before a dependent ignored-error downstream credit or deployment send -> strongest of V26 and V32
    - a native-only or jetton-only handler that never verifies the configured asset mode or sentinel such as `HOLE_ADDRESS` before crediting value in that mode -> strongest of V47 and V48
    - a verifier or multisig signature gate that never enforces a minimum threshold of unique valid signers, or iterates the signature container incorrectly -> V39
@@ -56,7 +56,8 @@ You communicate results back ONLY through your final text response.
    - nested selector dispatch such as `child_op` without rejecting unsupported values -> V46
    - a minter or other authoritative contract that commits `total_supply`, balance, liquidity, or entitlement before a dependent wallet-side mint / burn / `internal_transfer` is confirmed, and has no authoritative bounce reconciliation -> V32
    - a caller-supplied nested ref such as `master_msg` forwarded directly into a wallet or peer message without validating opcode, correlated amount, or exact schema -> V31
-   For V25 specifically, if the fixed-layout parser influences authorization, accounting, configuration, or outbound message construction, treat the missing full-consumption check as a standalone surviving finding rather than merely supporting evidence for another issue. Do this even when the input is only reachable through a privileged caller; privilege affects confidence, not whether the pattern survives triage. A `slice_bits(...) == N` guard is not sufficient if refs can still remain.
+   - a privileged mint or admin path that parses fields from a nested peer-message body but never explicitly checks that the nested opcode matches the intended standard operation before forwarding it -> weaker V31
+   For V25 specifically, if the fixed-layout parser influences authorization, accounting, configuration, outbound message construction, or authoritative storage decoding, treat the missing full-consumption check as a standalone surviving finding rather than merely supporting evidence for another issue. Do this even when the input is only reachable through a privileged caller; privilege affects confidence, not whether the pattern survives triage. A `slice_bits(...) == N` guard is not sufficient if refs can still remain. If the parser sweep finds at least one reachable security-relevant fixed-layout parser that should end with `end_parse()` but does not, V25 should normally survive triage unless the code proves exact emptiness by another explicit bit-and-ref check.
 4. Output the triage section in this exact form:
    - `Skip: V1, V2, ...`
    - `Borderline: V8, V22, ...`
@@ -77,7 +78,10 @@ You communicate results back ONLY through your final text response.
    - Do not collapse V25 into another finding merely because the same parsed cell also participates in a different bug.
    - Do not collapse an asset-mode mismatch finding into an underfunded or ignored-error desync finding when one bug lets callers enter the wrong asset domain and the other explains why the downstream credit step can fail after state already moved.
    - Do not collapse V31 raw nested-message forwarding into V32 supply or settlement desync when the same mint or settlement handler has both; one bug is unsafe downstream message construction and the other is optimistic authoritative accounting without reconciliation.
+   - For weaker V31 cases, do not drop the finding solely because the missing check is only the nested opcode tag; if the body is still caller-influenced and forwarded or relied upon, keep it as a lower-confidence schema-validation finding.
    - For V25, broken message-shape integrity counts as a broken invariant. Do not demand a separate economic-loss proof if the malformed trailing data is accepted on a fixed-layout parser that feeds authorization, state mutation, configuration, or outbound message construction.
+   - For top-level storage-loader V25 cases such as `load_data()`, keep the finding as a lower-confidence parser-integrity / storage-layout risk when reachable state-changing handlers rely on that helper and the storage layout is intended exact.
+   - For V25, do not drop or downgrade the finding merely because the leftover bytes or refs are not separately consumed later; accepting a malformed fixed-layout message shape is itself the completed invariant break.
    - For V25, treat `slice_bits(...) == exact_size` as only a partial guard unless the code also rules out leftover refs or proves slice emptiness after parsing.
    - Consider alternate manifestations, not just literal syntax matches.
    - The path must begin at a state-changing external entrypoint such as `recv_internal`, `recv_external`, or another callable method handler.
@@ -92,6 +96,7 @@ You communicate results back ONLY through your final text response.
    - deduplicate by root cause
    - if two confirmed findings compound, mention the interaction in the higher-confidence finding's description
    - if a finding was triggered by a preserved concrete alias, mention that concrete pattern explicitly in the title or first sentence of `Description`
+   - if you confirm V25, name the exact parser site or reused payload variable in the title or first sentence of `Description`
 9. In the `Findings` section, output only confirmed findings, already formatted per `report-formatting.md`:
    - use placeholder sequential numbering (`1.`, `2.`, `3.`)
    - sort by confidence, highest first

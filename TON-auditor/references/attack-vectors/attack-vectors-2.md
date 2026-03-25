@@ -6,7 +6,7 @@
 
 **31. Forwarding Unvalidated Raw Internal Messages**
 
-- **D:** If a contract forwards a caller-supplied or externally influenced message cell without rebuilding or validating its schema, opcode, correlated amount fields, value, and send-mode semantics, attackers can smuggle malformed bodies, mismatched transfer amounts, hostile `forward_ton_amount` values, or unexpected message flags into downstream flows. This includes minter or router paths that accept a nested ref such as `master_msg` and pass it directly into a wallet or peer contract after only partial parsing of one field.
+- **D:** If a contract forwards a caller-supplied or externally influenced message cell without rebuilding or validating its schema, opcode, correlated amount fields, value, and send-mode semantics, attackers can smuggle malformed bodies, mismatched transfer amounts, hostile `forward_ton_amount` values, or unexpected message flags into downstream flows. This includes minter or router paths that accept a nested ref such as `master_msg` and pass it directly into a wallet or peer contract after only partial parsing of one field. Even when the path is privileged and the only missing check is an explicit nested opcode assertion, the contract is still accepting and forwarding a peer-message shape it never proved matches the intended standard operation; that weaker subcase should still survive as a low-confidence or minor-style finding rather than being dropped as mere style.
 - **FP:** The contract reconstructs the outgoing message from trusted fields, or fully validates the supplied cell before any send.
 
 **32. Cross-Contract Accounting or Supply Desync in Multi-Step Settlement**
