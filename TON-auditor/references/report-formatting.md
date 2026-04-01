@@ -1,10 +1,34 @@
 # Report Formatting
 
+Use this file as the formatting contract for final audit output.
+
+## Inputs
+
+- the audited scope
+- the merged confirmed findings
+- the confidence threshold from `judging.md`
+
+## Goal
+
+Produce one consistent audit report shape so findings from different agents can be merged without reformatting drift.
+
+## Output Contract
+
+- print one terminal-ready final report, or
+- write the same report shape to the findings directory when `--file-output` is explicitly enabled
+
 ## Report Path
 
-Save the report to `assets/findings/{project-name}-ai-audit-report-{timestamp}.md` where `{project-name}` is the repo root basename and `{timestamp}` is `YYYYMMDD-HHMMSS` at scan time.
+Save the report to:
 
-## Output Format
+`assets/findings/{project-name}-ai-audit-report-{timestamp}.md`
+
+Where:
+
+- `{project-name}` is the repo root basename
+- `{timestamp}` is `YYYYMMDD-HHMMSS` at scan time
+
+## Output Template
 
 ````
 # 🔐 Security Review — <ContractName or repo name>
@@ -69,8 +93,13 @@ Findings List
 
 ---
 
-> ⚠️ This review was performed by an AI assistant. AI analysis can never verify the complete absence of vulnerabilities and no guarantee of security is given. Team security reviews, bug bounty programs, and on-chain monitoring are strongly recommended. 
-
+> ⚠️ This review was performed by an AI assistant. AI analysis can never verify the complete absence of vulnerabilities and no guarantee of security is given. Team security reviews, bug bounty programs, and on-chain monitoring are strongly recommended.
 ````
 
-**Rules:** Follow the template above exactly. Sort findings by confidence (highest first). Findings below the threshold get a description but no **Fix** block. Draft findings directly in report format and keep FunC/TON terminology.
+## Rules
+
+- Follow the template above exactly.
+- Sort findings by confidence, highest first.
+- Findings below the threshold must still appear in the report and in the findings list; they get a `Description` but no `Fix` block.
+- Draft findings directly in report format.
+- Keep FunC / TON terminology.

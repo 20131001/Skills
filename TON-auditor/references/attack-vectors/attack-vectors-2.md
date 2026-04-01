@@ -2,6 +2,16 @@
 
 61 total attack vectors
 
+## How To Use This Catalog
+
+- Treat each vector as a generalized root-cause template, not as a project-specific signature.
+- Preserve concrete code patterns as aliases of the nearest generalized vector when they are what actually triggered the match.
+- Keep the strongest generalized match when multiple vectors describe the same root cause.
+- Keep separate findings only when the exploit mechanism or the local fix is materially different.
+- Do not merge away parser-integrity findings such as V25 merely because the same parser or cell also participates in another bug.
+- `D` describes the defect pattern; `FP` describes the main false-positive boundary.
+- Numbering is global across both files; the split is only for bundle size and prompt efficiency.
+
 ---
 
 **31. Forwarding Unvalidated Raw Internal Messages**
