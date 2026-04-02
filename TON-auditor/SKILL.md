@@ -1,7 +1,11 @@
 ---
 name: TON-auditor
-description: Audit FunC TON contracts and return a deduplicated report of confirmed security findings.
-when_to_use: Use when the user wants a TON smart contract security audit, exploit-path review, or standards check for FunC contracts. Examples: "audit this jetton minter", "review these TON contracts", "find security bugs in this wallet", "check TEP-74 compliance", "deep review this bridge". Do not use for non-TON code, ordinary feature work, or pure refactors with no security-review intent.
+description: >
+  Audit FunC TON contracts and return a deduplicated report of confirmed security findings.
+when_to_use: >
+  Use when the user wants a TON smart contract security audit, exploit-path review, or standards check for FunC contracts. 
+  Examples: "audit this jetton minter", "review these TON contracts", "find security bugs in this wallet", "check TEP-74 compliance", "deep review this bridge". 
+  Do not use for non-TON code, ordinary feature work, or pure refactors with no security-review intent.
 allowed-tools:
   - Read
   - Task
