@@ -286,10 +286,20 @@ These vectors apply across FunC, Tolk, and Tact because the root cause comes fro
 
 **TC57. Cross-Message Temporary State Reuse**
 
-- **D:** Saving temporary request data in contract state for use by a later message in the same cascade lets concurrent flows overwrite it or consume it out of order, causing wrong amounts, recipients, or entitlements to be used.
-- **FP:** The state is keyed by a unique request id and expected sender, consumed exactly once, and stale or concurrent replies cannot affect another flow.
+- **D:** Saving temporary request, pending, rollback, query-id, claim, sale, stake, vote, mint, burn, tax, escrow, or callback state for a later message lets concurrent, stale, successful, bounced, or unrelated flows consume it out of order. Missing success cleanup, query-id-only matching, or rollback from mutable current state can corrupt amounts, recipients, entitlements, storage, or completed accounting.
+- **FP:** The state is keyed by a unique request id plus expected sender/destination/message type, consumed or invalidated on every terminal path, and stale or concurrent replies cannot affect another flow.
 
 **TC58. Parent-Child Peer Authentication Failure**
 
 - **D:** Master/child contract groups that trust payload-supplied parent, child, owner, index, or wallet fields instead of recomputing or checking the expected peer address can process spoofed messages from fake children, fake parents, or unrelated contracts.
 - **FP:** Every parent-child direction authenticates `sender` against a peer derived from trusted code/state/index or stored state, and replies are correlated to an outstanding request before state changes.
+
+**TC59. Tax, Fee, or Net-Amount Accounting Mismatch**
+
+- **D:** A contract records or validates gross token amounts while a wallet, master, tax window, fee-on-transfer rule, burn split, royalty, redistribution leg, or transfer hook delivers a lower net amount or diverts part of the value. This can underpay users, overstate rewards, desync supply, or make redistribution silently incomplete.
+- **FP:** The protocol uses a non-taxed transfer path for internal payouts, explicitly books the net amount received by each beneficiary, or reconciles every fee/tax/burn/redistribution leg on failure.
+
+**TC60. Business Math Boundary or Rounding Error**
+
+- **D:** Vesting, staking, sale, governance, reward, fee, or cap math rounds periods, ratios, decimals, quorum, thresholds, or tranche counts in a direction that releases value early, blocks a legitimate claim/exit/vote, overcharges, underpays, or corrupts authoritative accounting.
+- **FP:** Boundary cases are explicitly handled, rounding direction is documented and safe for the protected invariant, and the final period/cap/quorum/threshold reaches the intended exact state.

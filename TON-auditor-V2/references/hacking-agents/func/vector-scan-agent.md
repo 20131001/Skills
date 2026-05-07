@@ -43,7 +43,12 @@ Use the shared vector-agent output contract exactly: `Triage`, `Deep Pass`, `Fin
    - a `save_data(...)`, `load_data()`, or `store_*` helper call that passes adjacent same-typed arguments in a different order from the helper signature -> FC7
    - a `provide_wallet_address` / `take_wallet_address` / `get_wallet_address` path that derives the wrong wallet type or disagrees with the contract's own wallet getter formula -> TC49
    - a value-bearing deposit or `transfer_notification` path that credits the asset first, then hits an outer `catch` / silent `return` with no refund or rollback -> strongest of TC22 and TC27
+   - a value-bearing deposit or `transfer_notification` path that credits the asset first, then later throws/rejects on parsing, phase, cap, selector, or business validation with no refund -> TC22/TC27
    - an owner/admin withdrawal or "refund remaining" path that transfers from gross inventory without subtracting reserved or unclaimed obligations -> strongest of TC38 and TC39
+   - pending, rollback, query-id, temporary request, or callback state left after success, matched without expected sender/destination/message type, reused across different flows, hit by a later unrelated bounce/callback, or restored from mutable current state instead of immutable pending data -> TC57/TC48/TC53
+   - taxed, fee-on-transfer, burn-split, or redistribution path books gross amount while recipients receive net amount, protocol payouts are taxed after gross accounting, or a split leg can fail silently -> TC59/TC39/TC26
+   - vesting, cap, quorum, threshold, reward, ratio, denominator, or decimal-scale math rounds in a way that releases value early before a stored end time, blocks exit, or miscounts accounting -> TC60/TC38
+   - proof, Merkle, signature-set, or voting helper cannot handle an edge shape that the surrounding contract can store or route to it, such as empty single-leaf proof -> strongest of FC6 and TC38
    - nested selector dispatch such as `child_op` without rejecting unsupported values -> TC38
    - a minter or other authoritative contract that commits `total_supply`, balance, liquidity, or entitlement before a dependent wallet-side mint / burn / `internal_transfer` is confirmed, and has no authoritative bounce reconciliation -> TC26
    - a caller-supplied nested ref such as `master_msg` forwarded directly into a wallet or peer message without validating opcode, correlated amount, or exact schema -> TC25

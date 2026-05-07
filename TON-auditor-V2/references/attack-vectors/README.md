@@ -12,7 +12,7 @@ Some root causes appear in multiple language files with different IDs. That is i
 
 ## Classification
 
-**Shared TON/TVM vectors:** TC1-TC58.
+**Shared TON/TVM vectors:** TC1-TC60.
 
 **TEP standard vectors:** TP1-TP26.
 

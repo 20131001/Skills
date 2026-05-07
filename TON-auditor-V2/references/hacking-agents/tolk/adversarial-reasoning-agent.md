@@ -34,6 +34,12 @@ Follow the shared adversarial-agent rules in `shared-rules.md`. The primary targ
 4. Check TON-specific exploit classes:
    - partial execution after underfunded cascades
    - ignored action errors after authoritative state mutation
+   - local ignored-send failure separately from remote bounced failure
+   - value-bearing post-credit rejection without refund
+   - pending/rollback/query-id lifecycle across success, bounce, stale, and unrelated replies
+   - taxed, fee-on-transfer, burn-split, redistribution, and protocol-payout gross-vs-net accounting
+   - vesting, cap, quorum, threshold, ratio, denominator, and decimal-scale boundary math, including full entitlement before a stored end time
+   - Merkle/proof, signature-set, and weighted-vote helper edge shapes such as empty single-leaf proofs
    - counterfeit wallet or callback spoofing
    - parent/child or factory-managed peer spoofing
    - bounce-handler truncation assumptions
@@ -41,7 +47,8 @@ Follow the shared adversarial-agent rules in `shared-rules.md`. The primary targ
    - wrong wallet derivation or standard getter ABI
    - unsupported opcode/selector acceptance
    - TEP opcode, getter, response, optional-field, excess, and metadata conformance failures
-5. Preserve distinct parser-integrity, raw nested-message forwarding, and optimistic accounting/supply desync findings when their fixes differ.
+5. Run an entrypoint/helper coverage pass before final output. For each nontrivial Tolk handler, router branch, lazy field access, storage helper, parser/codec, getter, send helper, or callback path, ask whether it has one of these local root causes even if a broader invariant finding already exists: post-credit rejection, local ignored-send finality, remote bounce compensation gap, stale pending cleanup, cross-flow pending collision, mutable rollback, query-id/correlation confusion, parser/helper edge case, tax/net-amount mismatch, protocol payout underpayment, and math/rounding boundary error.
+6. Preserve distinct parser-integrity, raw nested-message forwarding, late-validation fund lock, stale pending lifecycle, tax/net-amount mismatch, business-math boundary, and optimistic accounting/supply desync findings when their fixes differ.
 
 ## Output Rules
 

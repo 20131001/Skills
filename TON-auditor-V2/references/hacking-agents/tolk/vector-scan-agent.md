@@ -44,8 +44,13 @@ Use the shared vector-agent output contract exactly: `Triage`, `Deep Pass`, `Fin
    - typed storage or message field order mismatch -> TL4/TC41/TC42
    - wallet discovery/getter derivation disagreement -> TC49
    - value-bearing receive path with swallowed error and no refund/rollback -> TC22/TC27
+   - value-bearing receive path where the asset is credited before later parser, phase, cap, selector, or business validation can throw with no refund -> TC22/TC27
    - unvalidated caller-supplied nested message forwarded downstream -> TC25
    - unsupported selector/enum/opcode values accepted silently -> TC38
+   - pending, rollback, query-id, temporary request, or callback state left after success, matched without expected sender/destination/message type, reused across different flows, hit by a later unrelated bounce/callback, or restored from mutable current state instead of immutable pending data -> TC57/TC48/TC53
+   - taxed, fee-on-transfer, burn-split, or redistribution path books gross amount while recipients receive net amount, protocol payouts are taxed after gross accounting, or a split leg can fail silently -> TC59/TC39/TC26
+   - vesting, cap, quorum, threshold, reward, ratio, denominator, or decimal-scale math rounds in a way that releases value early before a stored end time, blocks exit, or miscounts accounting -> TC60/TC38
+   - proof, Merkle, signature-set, or voting helper cannot handle an edge shape that the surrounding contract can store or route to it, such as empty single-leaf proof -> strongest of TL3 and TC38
    - parent/child or factory-managed callback trusts body fields instead of deriving the expected peer address and checking the inbound sender -> TC58/TC18/TC53
    - external wallet or admin message lacks nonce, timestamp/valid-until, or consumed replay state -> TC11/TC33
    - gas is accepted before signature, freshness, authorization, and message-shape verification -> TC15

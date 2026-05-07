@@ -31,7 +31,9 @@ Follow the shared adversarial-agent rules in `shared-rules.md`. The primary targ
    - `external` replay, signature, and gas acceptance
    - `external` misuse of internal-message context such as `context()` or `sender()`
    - bounceable sends without matching `bounced()` recovery, and `bounced` truncation or partial decoding
+   - local action-phase send failure separately from remote bounce; an ignored send can leave no message and therefore no bounce
    - send mode, value, reserve, cashback, and excess routing
+   - pending/rollback/request/query-id lifecycle across success, bounce, no-response, stale-message, and unrelated-message paths
    - mutable helpers that fail to update `self` or whose mutation result is ignored
    - trait inheritance exposing unexpected receivers or admin paths
    - trait persistent state initialization and unsafe default or empty security state
@@ -44,10 +46,15 @@ Follow the shared adversarial-agent rules in `shared-rules.md`. The primary targ
    - typed asynchronous response receivers that lack sender and request correlation
    - whole-balance or carry-all sends that can drain storage rent or subsidize callers
    - Jetton wallet/master derivation, standard message schemas, excess routing, funding, and bounce recovery
+   - Jetton or NFT transfers that credit the receiving wallet before the application receiver performs payload, phase, cap, tier, or business validation
+   - taxed, fee-on-transfer, burn-split, or redistribution Jetton flows where protocol accounting records gross amounts but downstream recipients receive net amounts; enumerate staking rewards, unstake principal, vesting payouts, sale delivery, admin withdrawals, refunds, tax splits, and reward top-ups separately
    - TEP opcode, getter, response, optional-field, excess, and metadata conformance failures
+   - vesting, staking, sale, and governance arithmetic around non-divisible periods, final tranche, exact cap boundaries, quorum/threshold equality, ratio denominators, and decimal scaling; promote full entitlement before a stored end time unless source explicitly permits it
+   - Merkle/proof, signature-set, and weighted-vote helpers around empty proof, single-leaf roots, malformed trailing data, duplicate voters/signers, and aggregate-total mismatch
    - disabled Tact safety options in `tact.config.json` when that config file is bundled or otherwise visible in the audited source context
    - fallback receivers accepting unsupported value-bearing messages
-3. Preserve distinct parser-integrity, fallback-acceptance, raw nested-message forwarding, and optimistic accounting/supply desync findings when their fixes differ.
+3. Run a receiver/helper coverage pass before final output. For each nontrivial Tact receiver, trait receiver, fallback, typed response, mutable helper, parser, getter, send helper, or callback path, ask whether it has one of these local root causes even if a broader invariant finding already exists: post-credit rejection, local ignored-send finality, remote bounce compensation gap, stale pending cleanup, cross-flow pending collision, mutable rollback, query-id/correlation confusion, parser/helper edge case, tax/net-amount mismatch, protocol payout underpayment, and math/rounding boundary error.
+4. Preserve distinct parser-integrity, fallback-acceptance, raw nested-message forwarding, late-validation fund lock, stale pending lifecycle, tax/net-amount mismatch, business-math boundary, and optimistic accounting/supply desync findings when their fixes differ.
 
 ## Output Rules
 

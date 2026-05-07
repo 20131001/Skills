@@ -63,6 +63,12 @@ The following code-level anti-patterns are not mere style issues. If caller-cont
 - a manual commit checkpoint that persists partially validated business state before later fallible parsing, reserve, or send work
 - a standard-facing Tact field, Tolk typed field, or custom codec that cannot represent `addr_none`, optional tags, references, or the exact integer width/coin encoding required by the claimed ABI
 - a fallback receiver that accepts unsupported value-bearing protocol messages without explicit rejection, refund, or safe no-op proof
+- a post-credit Jetton/NFT/native-value receiver that performs business validation, parsing, unsafe optional unwrap, phase/cap/tier checks, or unsupported-payload rejection only after the asset has already moved, with no refund path
+- a pending/rollback/query-id/request map that is created for an async operation but is not consumed on success, can be matched by caller-controlled/reused identifiers, or restores from mutable current state instead of immutable pending data
+- a payout, reward, vesting, sale, tax, fee, burn, or redistribution path that books gross amounts while a taxed/fee-on-transfer wallet or split-leg flow delivers net amounts or silently drops a leg
+- a vesting, staking, sale, governance, reward, cap, quorum, threshold, ratio, or decimal calculation whose boundary rounding releases, blocks, burns, or miscounts a security-relevant entitlement
+- a proof, Merkle, signature-set, allowlist, or weighted-vote helper that cannot handle an edge shape the surrounding contract can store or route to it, such as an empty proof for a single-leaf root
+- a stale pending/correlation record that can be matched by a later unrelated flow, such as an admin withdrawal bounce hitting an old sale-delivery record with the same query id
 
 These patterns may still fail FP gate 2 or 3 if the attacker cannot reach the entrypoint or another guard already neutralizes the bug. If the path is reachable only by a privileged caller, keep the finding and apply the privileged-caller confidence deduction instead of dropping it solely because the caller is role-gated.
 
@@ -82,11 +88,23 @@ For the ignored-result pattern, it is enough to show that a failed lookup, delet
 
 For the value-bearing swallowed-failure pattern, it is enough to show that the contract has already accepted or credited user value before the swallowed failure point, and that the failure path neither refunds the asset nor reverses the accounting. An empty or effectively no-op `catch` on a deposit path is not harmless if user value has already moved.
 
+For the post-credit validation pattern, it is enough to show that a standard asset transfer, notification, or value-bearing receive path has already credited the receiving wallet/account before the application receiver can throw or reject on business conditions. The exploit does not require the attacker to profit directly; irreversible user asset lock, owner-withdrawable stranded value, or accounting desync is concrete impact.
+
 For the fallthrough pattern, it is enough to show that a handled branch, receiver, router case, or opcode path completes security-relevant work and can then execute a later default/error/conflicting branch that reverts, double-sends, skips validation, or corrupts state.
 
 For the reserved-obligation withdrawal pattern, it is enough to show that the contract separately tracks reserved, unclaimed, or claimable obligations and that the withdrawal path ignores them when computing the transferable amount. A privileged caller requirement reduces confidence but does not turn the issue into a mere trust-model note when users can be locked out of already-accounted entitlements.
 
 For the optimistic authoritative-state pattern, it is enough to show that the authoritative contract records supply, balance, liquidity, or entitlement before the dependent peer-side state transition is known to have succeeded, and that the authoritative layer either ignores the bounce or lacks another reconciliation path. You do not need a second exotic exploit primitive beyond the reachable message cascade.
+
+For ignored-error sends, distinguish local action-phase failure from remote bounce. If a correctness-critical send uses ignore-errors mode and local failure can prevent message creation, a bounce handler does not refute the finding unless the code separately proves the message was created or reconciles the no-message case.
+
+For pending/rollback lifecycle findings, it is enough to show that an async operation stores correlation or rollback state and at least one terminal path leaves it live, matches it to an unrelated later message, or restores from current mutable state rather than the stored snapshot. A cross-flow query-id collision is reportable when a later operation can send a bounced/callback message that reuses an old id and triggers the old rollback path. Do not merge this into generic optimistic accounting when the local fix is to consume, authenticate, namespace, or redesign pending state.
+
+For tax/net-amount findings, it is enough to show a reachable protocol payout or accounting path that assumes the nominal transfer amount while the wallet/master/fee rule can deliver less, burn part, redirect part, or skip a redistribution leg. A generic "transfer can fail" fix is insufficient when the bug persists on successful taxed transfers. Keep successful taxed payout underpayment separate from tax redistribution delivery failure because the former is fixed by net-aware or untaxed payout accounting, while the latter is fixed by split-leg reconciliation.
+
+For business-math boundary findings, it is enough to show a concrete boundary input or configured schedule/cap/quorum/ratio where the result violates the intended entitlement, release time, cap, vote count, or accounting invariant. Treat this as complete even when the trigger is an honest user action or normal time progression rather than an adversarial payload. If the code stores an end time or duration and a beneficiary can reach full entitlement before that end, do not require external tokenomics prose before reporting.
+
+For proof/helper edge findings, it is enough to show that the surrounding contract can create, store, or accept a state shape that the helper cannot verify or process. If a Merkle snapshot root can represent a single-leaf tree and proposal creation does not reject that shape, an empty-proof failure in the vote path is a complete liveness/integrity break even without off-chain Merkle-format documentation.
 
 For the nested-message forwarding pattern, it is enough to show that the forwarded nested cell remains caller-influenced and that the contract does not prove the forwarded opcode, amount, or layout matches the outer request it just authorized. A privileged mint or admin path reduces confidence but does not make this a style issue.
 
@@ -129,6 +147,8 @@ Default confidence threshold: **75**
   Example: payload-derived sender authorization, missing exact-layout proof on a fixed-layout nested parser, and forwarding an unvalidated nested message cell are distinct root causes even if they occur in one handler.
   Example: a native-mode asset-configuration bypass and an optimistic ignored-error downstream credit desync are distinct root causes even if both occur in the same liquidity handler.
   Example: unvalidated forwarding of a caller-supplied nested `master_msg` and minter-side `total_supply` desync after wallet-side mint failure are distinct root causes even if both occur in the same `op::mint` handler.
+  Example: a purchase receiver that traps inbound USDT on late validation and a later TYR payout path that finalizes accounting before delivery are distinct root causes even if both affect the same sale.
+  Example: an unstake path that can lose principal on local ignored-send failure, a stale pending rollback entry left after success, and a taxed payout underpayment are distinct root causes even if all touch the same staking maps.
 - If two findings compound, keep both only when they are meaningfully distinct; otherwise keep the stronger root-cause finding.
 - A linked-path finding is allowed only when two already validated findings form a stricter exploit chain and the combined impact is worse than either finding alone. Score it at the lower confidence of the two inputs. Do not add a linked-path finding when the interaction can be described clearly inside one existing finding.
 - For findings at or above `[80]`, sanity-check the proposed fix against the original exploit path. A fix that creates an authorization bypass, replay opening, trapped-value path, storage-rent drain, unbounded gas path, bounce/excess loss, TEP ABI break, or cross-language message-schema mismatch is not acceptable.
@@ -154,6 +174,9 @@ Default confidence threshold: **75**
 - For TA16-style parent-child findings, the concrete path is: parent or child receives a typed callback -> code trusts body fields such as parent, owner, child index, or sequence -> `sender()` is not checked against the derived/stored peer -> spoofed callback moves state or value.
 - For TA17-style lazy-deployment findings, the concrete path is: handler builds or accepts child `StateInit` / destination data -> `to`, `code`, and `data` do not match or deployment can fail after parent mutation -> funds, child ownership, or parent accounting become incorrect.
 - For FC9-style bitwise-negation findings, the concrete path is: caller reaches a handler -> guard uses `~flag` / `~status` as if it were logical negation -> TVM truthiness makes the branch reachable for unintended non-`-1` values -> authorization, pause, success, or phase logic is bypassed.
+- For TC57-style stale pending findings, the concrete path is: caller reaches an async operation -> handler stores pending/correlation/rollback state -> success, bounce, stale, unrelated-message path, or cross-flow query-id reuse fails to consume or authenticate the exact record -> later state, storage, or rollback behavior is corrupted.
+- For TC59-style tax/net-amount findings, the concrete path is: caller reaches a payout, reward, sale, vesting, redistribution, or accounting flow -> contract books nominal amount -> wallet/master/fee logic delivers net amount, diverts a split, or underfunds a payout recipient -> beneficiary, supply, pool, or accounting invariant is wrong.
+- For TC60-style business-math findings, the concrete path is: normal user or governance action reaches a math helper or boundary check -> rounding, division, denominator, decimal scale, cap, quorum, threshold, proof edge, or final-tranche result differs from the intended invariant -> value, entitlement, exit, vote, liveness, or accounting state is released, blocked, or miscounted.
 
 ## Do Not Report
 

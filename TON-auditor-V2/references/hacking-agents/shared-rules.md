@@ -58,9 +58,25 @@ Apply these rules to every TON audit agent bundle regardless of source language.
 - Do not output a report wrapper, analysis notes, triage, or chain-of-thought.
 - Sort findings by confidence, use placeholder sequential numbering, keep `Description` to one short sentence, and include `Fix` blocks only when confidence is at or above the threshold from `judging.md`.
 
+## Coverage Agents
+
+- The parent prompt assigns a coverage bundle and may assign a coverage family such as surface/auth, lifecycle/finality, parser/standards, accounting/math, or storage/gas.
+- Coverage is a completeness pass, not a summary pass. Emit one `COV:` line for every checklist item in the assigned bundle.
+- Emit one `COV-PROBE:` line for every semantic probe in the assigned bundle, and one `COV-SUMMARY:` line for the assigned family.
+- Treat every nontrivial receiver, entrypoint, parser, helper, getter, storage map, send, bounce path, and business formula as independently auditable even when a broader invariant finding already exists.
+- For lifecycle items, trace create -> local action failure -> remote bounce -> success callback -> excess/callback -> timeout/no-response -> stale/unrelated message -> cleanup. Missing one terminal path is a concrete signal.
+- For lifecycle items, also test duplicate query ids and cross-flow query-id reuse. A stale pending sale, claim, unstake, mint, burn, tax, or withdrawal record can be security-relevant when a later unrelated bounce or callback can match it.
+- For parser and standards items, check exact layout, trailing bits/refs, optional tags, address forms, integer widths, opcode tags, getter tuple order, nested-cell schemas, Merkle/proof helpers, empty proof, single-leaf proof, two-leaf proof, and producer/consumer agreement across languages.
+- For accounting and math items, test zero, one unit, equality at caps, cap plus one, non-divisible duration, final tranche, fee/tax active and inactive windows, failed split legs, quorum/threshold equality, denominator boundaries, decimal-scale conversion, and gross-booked vs net-received amounts for every protocol payout.
+- Mark checklist items as `finding` only when a complete reportable path exists. Mark them as `review_trail` when source-backed risk remains but one FP-gate element is unresolved. Mark them as `audited` only when the relevant guards or harmlessness proof are named in the note.
+- Do not let a global optimistic-accounting finding hide a distinct post-credit rejection, local ignored-send finality, remote bounce compensation gap, stale pending cleanup, mutable rollback, query-id correlation, cross-flow stale pending collision, helper edge case, tax/net-amount mismatch, protocol payout underpayment, or math/rounding issue.
+- Do not downgrade a probe to `review_trail` because off-chain prose is unavailable when the on-chain code defines the relevant invariant. Stored fields and state names such as vesting end/duration, snapshot root, total voting power, reward pool, pending state, and supply/accounting counters are sufficient on-chain evidence when the path is reachable and not source-refuted.
+- Treat these as direct finding signals unless a concrete source guard refutes them: full vesting entitlement claimable before the stored end time, accepted single-leaf-compatible Merkle roots whose empty proof cannot be verified, protocol payout state booked at gross while taxed/fee-on-transfer delivery gives the recipient net, and stale pending entries that a later unrelated bounce/callback can match.
+
 ## TON Chain Model
 
 - Model every non-trivial workflow as an asynchronous message cascade.
+- For each broad invariant issue, also inspect the receiver/helper-level edge that creates it. A global "optimistic accounting" finding does not cover a distinct late-rejection, stale-pending, tax/net-amount, or bounce-correlation bug when the fix must be applied in a different local path.
 - Partial execution is normal on TON; never assume a later contract action reverts an earlier committed state update.
 - Treat the inbound message envelope sender and value as the trusted transport context. Treat fields decoded from message bodies, nested cells, callbacks, and forwarded payloads as attacker-controlled until validated.
 - Authenticate callbacks and peer messages by both expected sender and outstanding-request correlation.
@@ -70,6 +86,10 @@ Apply these rules to every TON audit agent bundle regardless of source language.
 - Validate enough value for the whole cascade before committing authoritative supply, balance, liquidity, quota, or entitlement state.
 - Return or refund unsupported value-bearing messages instead of trapping assets through late throws, silent returns, or swallowed errors.
 - Reserve storage balance before optional sends or branches that could subsidize callers from contract balance.
+- Distinguish local action-phase send failure from remote bounce. Ignored local send failure may produce no outbound message and no bounce, so a bounce handler alone does not prove recovery.
+- Trace pending-operation state through create, success, bounce/failure, timeout/no-response, and unrelated/stale-message paths. A pending map is safe only when every terminal path consumes or invalidates the exact entry it created.
+- For taxed, fee-on-transfer, burn-split, or redistribution assets, reason about the net amount received by the beneficiary and every split leg. A payout path can be finality-safe but still underpay if the sender books gross amounts while the wallet delivers net amounts. Enumerate every application-level payout path, not only the tax-settlement handler.
+- Audit business arithmetic at boundary values: zero, one unit, non-divisible durations, final tranche, cap equality, decimal scale, ratio denominator, and rounding direction. Treat time/rounding mistakes as security-relevant when they release, block, or burn entitlements.
 
 ## Standards And Serialization
 
@@ -99,12 +119,20 @@ Apply these rules to every TON audit agent bundle regardless of source language.
 - Drop style, lint, naming, gas micro-optimization, observability-only, centralization-by-design, and speculative findings.
 - Confidence measures certainty, not severity.
 - Use `Review Trails` for specific source-backed risk signals that are not source-refuted but do not yet satisfy every finding gate. A Review Trail must name the location, case_family, evidence_trace, and unresolved blocker.
+- Do not use missing off-chain prose as the unresolved blocker when the on-chain code defines the invariant and the path is reachable. Promote or refute source-backed probes for vesting end/duration math, single-leaf/empty-proof verification, gross-vs-net taxed payouts, and stale pending cross-flow rollback.
 - Use `ton_case_key` only as internal merge metadata in the form `language | file | entrypoint-or-getter | case_family`. Do not put internal keys into the final report unless the requested output format has a field for them.
 
 ## Deduplication
 
 - Deduplicate by root cause, not title wording.
 - Preserve distinct findings when exploit mechanics or local fixes differ, even inside the same handler.
+- Preserve late validation after asset receipt separately from outbound transfer finality. The first needs refund/rejection before or after receipt; the second needs payout confirmation, recovery, or compensation.
+- Preserve stale pending-entry cleanup separately from optimistic accounting. The first needs state lifecycle cleanup/correlation; the second needs mutation ordering or reconciliation.
+- Preserve tax/net-amount mismatch separately from generic transfer failure. The fix must account for fee/tax behavior or bypass taxed paths for protocol payouts.
+- Preserve taxed protocol payout underpayment separately from tax redistribution delivery failure.
+- Preserve schedule/math boundary bugs separately from message-cascade failures.
+- Preserve helper/proof edge-case bugs separately from broader governance or authorization findings when the helper needs its own local fix.
+- Preserve cross-flow stale pending collisions separately from generic pending-map storage growth.
 - Preserve language-specific root causes separately when the same TON-level flow is exposed through different language entrypoints or requires different code-local fixes.
 - Do not merge unvalidated nested-message forwarding into optimistic accounting or supply desync when both exist.
 - Do not merge a parser-integrity issue into an auth, mint, forwarding, or standards-mismatch finding unless the exploit path and local fix are identical.

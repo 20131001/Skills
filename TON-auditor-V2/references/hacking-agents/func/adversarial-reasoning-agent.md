@@ -41,8 +41,10 @@ Follow the shared adversarial-agent rules in `shared-rules.md`. The primary targ
    - upgrade handlers and code execution
    - destructive modes, reserve discipline, and excess handling
 4. Perform an explicit parser-integrity sweep over reachable fixed-layout slice parsers, including `begin_parse()` sites and reused payload slices. If a parser is fixed-layout and the code never calls `end_parse()`, proves slice emptiness, or explicitly handles trailing extensions, keep that candidate alive for further review.
-5. Do not merge away distinct code-level anti-patterns that have different exploit mechanics or different local fixes even when they appear in the same handler. In particular, preserve missing `end_parse()` findings separately when the affected parser is fixed-layout and security-relevant.
+5. Run an entrypoint/helper coverage pass before final output. For each nontrivial FunC handler, opcode branch, storage helper, parser, getter, send helper, or callback path, ask whether it has one of these local root causes even if a broader invariant finding already exists: post-credit rejection, local ignored-send finality, remote bounce compensation gap, stale pending cleanup, cross-flow pending collision, mutable rollback, query-id/correlation confusion, parser/helper edge case, tax/net-amount mismatch, protocol payout underpayment, and math/rounding boundary error.
+6. Do not merge away distinct code-level anti-patterns that have different exploit mechanics or different local fixes even when they appear in the same handler. In particular, preserve missing `end_parse()` findings separately when the affected parser is fixed-layout and security-relevant.
    Preserve unvalidated nested-message forwarding separately from optimistic authoritative supply/accounting desync when both occur in the same mint or settlement handler.
+   Preserve post-credit rejection, local ignored-send finality, remote bounce compensation gap, stale pending cleanup, tax/net-amount mismatch, and math/rounding boundary findings separately when their fixes differ.
 
 ## Output Rules
 
@@ -64,7 +66,12 @@ Follow the shared adversarial-agent rules in `shared-rules.md`. The primary targ
   - a state or serialization helper call that passes adjacent same-typed arguments in a different order from the helper signature
   - a discovery or wallet getter path that derives the wrong wallet type or uses a different derivation formula from the contract's own canonical getter
   - a value-bearing deposit or `transfer_notification` path that accepts or credits user assets before a swallowed failure path with no refund or rollback
+  - a value-bearing deposit or `transfer_notification` path that credits assets before later parser, selector, phase, cap, or business validation can reject without refund
   - an owner/admin withdrawal or rescue path that ignores reserved or unclaimed user obligations and transfers gross inventory
+  - pending, rollback, query-id, temporary request, or callback state that is not consumed on success or is matched without expected peer correlation
+  - taxed, fee-on-transfer, burn-split, or redistribution paths that book gross amounts while beneficiaries receive net amounts, protocol payout paths that are taxed after gross accounting, or a split leg can fail silently
+  - vesting, staking, sale, governance, reward, cap, quorum, threshold, ratio, denominator, or decimal-scale math that fails at boundary values or releases full entitlement before a stored end time
+  - Merkle/proof, signature-set, or weighted-vote helpers that cannot handle edge shapes accepted by surrounding state, including empty single-leaf proofs
   - selector sub-dispatch that accepts unsupported `child_op`-style values without reverting
   - authoritative supply or settlement state committed before a dependent wallet-side mint, burn, or `internal_transfer` is known to have succeeded, with no authoritative bounce recovery
   - a caller-supplied nested message ref such as `master_msg` forwarded directly into a wallet or peer message after only partial parsing
