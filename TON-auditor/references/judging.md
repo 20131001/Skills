@@ -94,7 +94,7 @@ Rules:
 
 ### P5. Broken Threshold Signature-Set Validation
 
-- A verifier-set or multisig authorization flow never proves a minimum number of unique valid signers, or traverses the signature container incorrectly.
+- A verifier-set or multisig authorization flow never proves a non-zero minimum number of unique valid signers where signatures are required, lets an attacker-controlled configuration set that threshold to zero, or traverses the signature container incorrectly.
 
 ### P6. Misordered Same-Typed Helper Arguments
 
@@ -114,7 +114,8 @@ Rules:
 
 ### P10. Forwarded Nested Message Body Not Fully Validated
 
-- A caller-supplied nested internal message ref such as `master_msg` is forwarded to a wallet or peer contract without validating opcode, correlated amount, or exact schema.
+- A caller-supplied nested internal message ref such as `master_msg` is forwarded to a wallet or peer contract without validating opcode, correlated amount, identity/domain binding, or exact schema.
+- This includes relay or verifier flows where the outer authenticated signer, verifier, source, owner, or domain is checked, but the forwarded payload can name a different inner signer, verifier, source, owner, or domain that the downstream contract will trust.
 
 Rules:
 
@@ -129,7 +130,7 @@ Rules:
 - **P7**: It is enough to show that the contract already accepted or credited user value before the swallowed failure point, and that the failure path neither refunds nor reverses the accounting.
 - **P8**: A privileged caller requirement reduces confidence but does not turn the issue into a mere trust-model note when users can be locked out of already-accounted entitlements.
 - **P9**: It is enough to show that the authoritative contract records state before the peer-side transition is known to have succeeded and lacks reconciliation.
-- **P10**: The forwarded nested cell must remain caller-influenced and unproven against the intended outer request.
+- **P10**: The forwarded nested cell must remain caller-influenced and unproven against the intended outer request, including any duplicated identity or domain fields that downstream receivers treat as authoritative.
 
 ## Confidence Score
 
@@ -168,7 +169,7 @@ Default confidence threshold: **75**
 
 Examples of distinct root causes:
 
-- payload-derived sender authorization, missing `end_parse()` on a fixed-layout nested parser, and forwarding an unvalidated nested message cell are distinct even if they occur in one handler
+- payload-derived sender authorization, missing `end_parse()` on a fixed-layout nested parser, and forwarding an unvalidated or unbound nested message cell are distinct even if they occur in one handler
 - a native-mode asset-configuration bypass and an optimistic ignored-error downstream credit desync are distinct even if both occur in one liquidity handler
 - unvalidated forwarding of a caller-supplied nested `master_msg` and minter-side `total_supply` desync after wallet-side mint failure are distinct even if both occur in one `op::mint` handler
 

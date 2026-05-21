@@ -11,6 +11,7 @@ Consult this file whenever the audited code contains any of the following:
 - token metadata parsing or construction
 - external message handlers, signature checks, gas acceptance, and replay-protection commits
 - raw sends, message-header serialization, bounce handling, reserve logic, or send-mode flags
+- source registry, verifier registry, relayed verification messages, or forwarded publication payloads
 
 ## Primary Source Map
 
@@ -44,6 +45,13 @@ Consult this file whenever the audited code contains any of the following:
   - `report_royalty_params`
 - `TEP-64` token metadata:
   - collection / item content representation
+
+### Source Registry
+
+- Source registry and verifier-registry flows:
+  - bind the same verifier identity, code hash, source URL/content, compiler metadata, and signature/quorum proof across the outer authorization message and the inner registry update/deploy payload
+  - reject or rebuild forwarded publication payloads whose inner `verifier_id` differs from the authenticated outer `verifier_id`
+  - do not treat "message came from the verifier-registry contract" as proof that the forwarded payload's verifier id, code hash, or source content is truthful
 
 ### TON Contract Course Material
 

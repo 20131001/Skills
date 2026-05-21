@@ -35,7 +35,8 @@ Consult this file whenever the audited code includes any of the following:
 - If a contract supports native-mode and jetton-mode operation, each mode-specific entrypoint must verify the active asset configuration or sentinel such as `HOLE_ADDRESS` / `addr_none` before accepting value.
 - Administrative withdrawal, rescue, or "refund remaining" flows must compute the free balance after subtracting all reserved or unclaimed user obligations; never let an owner drain inventory that the contract still owes to claimants.
 - Never authenticate a caller by reading an address from `in_msg_body` or other attacker-controlled payload fields; use the sender from the trusted inbound message envelope or parsed full-message context.
-- Do not accept a caller-supplied nested wallet or peer message cell such as `master_msg` and forward it unchanged after parsing only one or two fields; rebuild the outbound body from trusted fields, or prove the nested opcode, amount, and layout match the authorized outer request exactly.
+- Do not accept a caller-supplied nested wallet or peer message cell such as `master_msg` and forward it unchanged after parsing only one or two fields; rebuild the outbound body from trusted fields, or prove the nested opcode, amount, identity/provenance fields, and layout match the authorized outer request exactly.
+- If a relay or verifier authenticates an outer identity or source tuple, every inner payload field that downstream contracts use for attribution, storage keying, child derivation, source publication, ownership, or code/content identity must be rebuilt from that outer context or checked equal before forwarding.
 - Reject unsupported selector, enum, or role-type values explicitly; nested dispatchers on `child_op`-style fields should not silently succeed on unknown branches.
 - In later consequence messages, `throw_*` checks should usually behave like assertions protecting invariants, not like late business-logic validation.
 - Bounced messages are useful recovery signals, but they are not full protection:
@@ -92,6 +93,7 @@ Consult this file whenever the audited code includes any of the following:
 - In FunC this usually means `end_parse()` or equivalent bit-and-ref emptiness proof. In Tolk and Tact this means the language-specific typed parser, custom serializer, or `Slice` fallback must prove the same exact shape.
 - A pure bit-count check is not enough when references may remain.
 - Treat caller-supplied nested cells in role-gated flows the same way; a missing exact-layout proof on an admin-only or minter-only payload parser is still a parser-integrity bug, with confidence reduced for privilege rather than dropped as unreachable.
+- For forwarded payloads, exact layout is not enough: compare repeated authority fields such as `verifier_id`, owner, parent/child id, code hash, source URL/content, destination, and storage keys against the outer authenticated context.
 - Check return flags from dictionary and system helpers before assuming a mutation succeeded.
 
 ### FunC-Specific Checks

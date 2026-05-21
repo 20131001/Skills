@@ -86,8 +86,8 @@ These vectors are extracted from `ton-blockchain/TEPs/text` and bundled for ever
 
 **TP17. TEP:91 Source Registry Code-Hash, Admin, or Quorum Bypass**
 
-- **D:** Source registry contracts or verifiers that index by contract address instead of code hash, let non-admins update/remove verifiers, accept insufficient or duplicate verifier signatures, fail to bind signatures to `(code_hash, sources_json_url)`, or publish malformed `sources.json` can cause explorers to display unverified or fraudulent source code.
-- **FP:** Code hash, verifier id, admin, quorum public keys, source URLs, compiler config, and signatures are all bound and verified before registry updates.
+- **D:** Source registry contracts or verifiers that index by contract address instead of code hash, let non-admins update/remove verifiers, accept insufficient or duplicate verifier signatures, fail to bind signatures to `(verifier_id, code_hash, sources_json_url)`, forward a caller-supplied source-registry payload whose inner `verifier_id` can differ from the authenticated outer verifier, or publish malformed `sources.json` can cause explorers to display unverified or fraudulent source code under another verifier's identity.
+- **FP:** Code hash, verifier id, admin, quorum public keys, source URLs, compiler config, and signatures are all bound and verified before registry updates; any forwarded source-registry payload is rebuilt from, or checked equal to, the authenticated verifier id and signed source tuple before deployment/update.
 
 **TP18. TEP:122 Onchain Reveal Sender, Mode, Count, or Correlation Mismatch**
 

@@ -41,6 +41,7 @@ Use the shared vector-agent output contract exactly: `Triage`, `Deep Pass`, `Fin
    - authoritative state saved before a dependent ignored-error or underfunded downstream consequence -> TC20/TC26
    - native/jetton mode mismatch or uninitialized asset config -> TC39/TC40
    - broken signature-set traversal, duplicate signer acceptance, or missing threshold -> TC32
+   - a forwarder authenticates an outer verifier, owner, sender, signer set, child id, code hash, or source tuple, then forwards a caller-supplied nested payload whose equivalent inner identity/provenance fields can differ and will be trusted downstream -> strongest of TC25, TC18, TC58, and TP17 when source-registry publication is involved
    - typed storage or message field order mismatch -> TL4/TC41/TC42
    - wallet discovery/getter derivation disagreement -> TC49
    - value-bearing receive path with swallowed error and no refund/rollback -> TC22/TC27
@@ -58,4 +59,5 @@ Use the shared vector-agent output contract exactly: `Triage`, `Deep Pass`, `Fin
    - value-moving address path omits workchain/canonical-address validation -> TC9
    - Jetton deposit or callback trusts the sender/payload wallet instead of deriving the expected user wallet from the trusted minter/master and owner -> TC14
    - carry-all, fee-separate, explicit-value, or ignored-error sends can spend contract balance or skip storage reserve -> TC29/TC45
-3. During deep pass, preserve distinct parser-integrity, nested-message-forwarding, standards-mismatch, and optimistic-accounting findings when their fixes differ.
+3. When auditing relay or forwarding handlers, parse any known target payload schema visible in the bundle and compare outer authenticated identity/provenance fields against inner forwarded fields. Keep mismatches such as outer `verifier_id = A` with inner source-registry `verifier_id = B` as separate candidates.
+4. During deep pass, preserve distinct parser-integrity, nested-message-forwarding, `forwarded-identity-misbinding`, standards-mismatch, and optimistic-accounting findings when their fixes differ.

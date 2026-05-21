@@ -30,6 +30,7 @@ Translate TON secure-programming guidance into compact audit rules for message f
 - Administrative withdrawal, rescue, or “refund remaining” flows must compute free balance after subtracting reserved or unclaimed user obligations.
 - Never authenticate a caller by reading an address from `in_msg_body` or other attacker-controlled payload fields.
 - Do not accept a caller-supplied nested wallet or peer message cell such as `master_msg` and forward it unchanged after parsing only one or two fields; either rebuild the body from trusted fields or prove the nested opcode, amount, and layout match the authorized outer request.
+- When a relay, verifier registry, bridge, router, or dispatcher authenticates an outer actor or domain, every downstream body field that names an actor or domain, such as `verifier_id`, owner, source, token master, or account id, must be rebuilt from or explicitly compared against that authenticated outer context before forwarding.
 - Reject unsupported selector, enum, or role-type values explicitly.
 - In later consequence messages, `throw_*` checks should usually behave like invariant assertions, not late business-logic validation.
 - Bounced messages help recovery, but they are not full protection:
@@ -47,7 +48,7 @@ Translate TON secure-programming guidance into compact audit rules for message f
   - a wallet-specific or deployment-specific domain
 - For bridge verifiers, multisigs, and threshold-signature flows, validate the signature set as a set:
   - traverse the full container correctly
-  - require the configured minimum number of valid signatures
+  - require a non-zero configured minimum number of valid signatures for any path whose security depends on signatures
   - count only unique verifier identities
 - If a path can still throw after `accept_message()`, commit replay-protection state before the fallible work.
 

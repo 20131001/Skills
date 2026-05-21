@@ -48,6 +48,7 @@ Produce one deduplicated TON audit result with explicit exploit-path evidence an
 - Treat `security-best-practices.md` as the source of truth for generic TON-specific security guidance.
 - Match project-specific code to generalized attack vectors; preserve old concrete patterns as aliases of the nearest generalized vector.
 - Reconstruct the reachable execution map for every audit: entrypoint -> helpers -> outbound messages -> in-scope receivers -> bounce paths -> terminal state writes.
+- During execution-map reconstruction, track authenticated authority context across forwarded messages: any outer signer/verifier/source/owner/domain that gates a send must be compared with duplicated identity or domain fields consumed by in-scope receivers.
 - Perform an explicit parser-integrity sweep on every audit: enumerate reachable fixed-layout slice parsers, including `begin_parse()` sites, reused payload slices, and top-level storage loaders such as `load_data()`.
 - Do not inline attack-vector file contents into agent prompts. Agents must read bundle files instead.
 - Do not invent findings during merge.
@@ -117,7 +118,7 @@ Spawn one vector agent per bundle and, in `deep` mode, one adversarial reasoning
 - Vector agents use `model: "gpt-5.3-codex"` with `reasoning_effort: "medium"`.
 - Each vector-agent prompt must contain the full text of `vector-scan-agent.md`, then append:
   - `Your bundle file is /tmp/audit-agent-N-bundle.md (XXXX lines).`
-  - `Build the execution map first and use it for every vector: entrypoint -> helpers -> outbound messages -> in-scope receivers -> bounce paths -> terminal state writes.`
+  - `Build the execution map first and use it for every vector: entrypoint -> helpers -> outbound messages -> in-scope receivers -> bounce paths -> terminal state writes. Track authenticated authority context across forwards, and compare outer signer/verifier/source/owner/domain fields with any duplicated identity/domain fields consumed by receivers.`
   - `Use standards-and-lessons.md and security-best-practices.md inside the bundle whenever the code depends on TON standards, message semantics, gas behavior, upgrade logic, or external-message safety.`
   - `Your final response must contain exactly these sections in order: Triage, Deep Pass, Findings.`
   - `Under Findings, output only confirmed finding blocks formatted per report-formatting.md, or No findings.`

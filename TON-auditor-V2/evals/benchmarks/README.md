@@ -11,3 +11,4 @@ Good benchmark cases isolate one or two real TON audit risks across FunC, Tolk, 
 - external-message replay or gas-drain paths
 - Tact fallback receiver accepting unsupported value-bearing messages
 - Tolk lazy parser or typed storage decoder failing after state mutation
+- `forwarded-identity-misbinding`, such as a verifier registry authenticating outer verifier `A` while forwarding a source-registry payload that publishes inner verifier `B`

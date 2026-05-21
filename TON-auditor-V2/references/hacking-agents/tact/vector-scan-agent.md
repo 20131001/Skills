@@ -57,6 +57,7 @@ Use the shared vector-agent output contract exactly: `Triage`, `Deep Pass`, `Fin
    - bounce recovery exists but local ignored send failure can suppress the outbound message before any bounce -> TC20/TC26
    - native/jetton mode mismatch or uninitialized asset config -> TC39/TC40
    - broken signature-set traversal, duplicate signer acceptance, or missing threshold -> TC32
+   - a forwarder authenticates an outer verifier, owner, sender, signer set, child id, code hash, or source tuple, then forwards a caller-supplied nested payload whose equivalent inner identity/provenance fields can differ and will be trusted downstream -> strongest of TC25, TC18, TC58, and TP17 when source-registry publication is involved
    - typed message/storage field order or getter ABI mismatch -> TA4/TC41/TC42/TC49
    - value-bearing receiver with swallowed error and no refund/rollback -> TC22/TC27
    - value-bearing receiver where Jettons/NFTs were already credited before later `require`, `throw`, unsafe unwrap, parser failure, cap check, phase check, or unsupported payload check -> TC22/TC27
@@ -83,4 +84,5 @@ Use the shared vector-agent output contract exactly: `Triage`, `Deep Pass`, `Fin
    - taxed/fee-on-transfer wallet path causes protocol payout, reward, unstake principal, vesting payout, sale delivery, admin withdrawal, refund, or redistribution accounting to book gross while beneficiaries receive net -> TC59/TC39/TC26
    - schedule, vesting, tranche, cap, quorum, or threshold arithmetic rounds in a direction that releases value early before a stored end time, blocks legitimate exit, or corrupts governance outcome -> TC60/TC38
    - proof, Merkle, signature-set, or voting helper cannot handle an edge shape that the surrounding contract can store or route to it, such as empty single-leaf proof -> strongest of TA3 and TC38
-3. During deep pass, preserve distinct parser-integrity, fallback-acceptance, nested-message-forwarding, standards-mismatch, and optimistic-accounting findings when their fixes differ.
+3. When auditing relay or forwarding receivers, parse any known target payload schema visible in the bundle and compare outer authenticated identity/provenance fields against inner forwarded fields. Keep mismatches such as outer `verifier_id = A` with inner source-registry `verifier_id = B` as separate candidates.
+4. During deep pass, preserve distinct parser-integrity, fallback-acceptance, nested-message-forwarding, `forwarded-identity-misbinding`, standards-mismatch, and optimistic-accounting findings when their fixes differ.

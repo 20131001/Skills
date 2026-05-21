@@ -44,6 +44,7 @@ Follow the shared adversarial-agent rules in `shared-rules.md`. The primary targ
 5. Run an entrypoint/helper coverage pass before final output. For each nontrivial FunC handler, opcode branch, storage helper, parser, getter, send helper, or callback path, ask whether it has one of these local root causes even if a broader invariant finding already exists: post-credit rejection, local ignored-send finality, remote bounce compensation gap, stale pending cleanup, cross-flow pending collision, mutable rollback, query-id/correlation confusion, parser/helper edge case, tax/net-amount mismatch, protocol payout underpayment, and math/rounding boundary error.
 6. Do not merge away distinct code-level anti-patterns that have different exploit mechanics or different local fixes even when they appear in the same handler. In particular, preserve missing `end_parse()` findings separately when the affected parser is fixed-layout and security-relevant.
    Preserve unvalidated nested-message forwarding separately from optimistic authoritative supply/accounting desync when both occur in the same mint or settlement handler.
+   Preserve `forwarded-identity-misbinding` separately from zero-quorum, threshold-signature, parser-integrity, and generic nested-message-forwarding findings. If a forwarder proves outer identity `A` but forwards a payload where downstream state uses inner identity `B`, validate the `A != B` path as its own candidate.
    Preserve post-credit rejection, local ignored-send finality, remote bounce compensation gap, stale pending cleanup, tax/net-amount mismatch, and math/rounding boundary findings separately when their fixes differ.
 
 ## Output Rules
@@ -76,6 +77,7 @@ Follow the shared adversarial-agent rules in `shared-rules.md`. The primary targ
   - authoritative supply or settlement state committed before a dependent wallet-side mint, burn, or `internal_transfer` is known to have succeeded, with no authoritative bounce recovery
   - a caller-supplied nested message ref such as `master_msg` forwarded directly into a wallet or peer message after only partial parsing
   - a privileged mint or admin path that parses a nested peer-message body but never explicitly verifies the nested opcode before relying on or forwarding that body
+  - a verifier, registry, factory, or relay that authenticates one outer identity/source tuple but forwards a nested payload with a different inner `verifier_id`, owner, child id, code hash, source URL/content, destination, or storage key that the downstream contract trusts
 - For fixed-layout missing-`end_parse()` cases, privilege on the caller path lowers confidence but does not by itself make the issue unreachable.
 - If a reachable fixed-layout parser should end with `end_parse()` and there is no equivalent emptiness proof, keep that finding alive even if the leftover bytes or refs are not separately consumed later; the accepted malformed message shape is already the broken invariant.
 - Apply the same rule to authoritative storage loaders such as `load_data()` from `get_data().begin_parse()` when reachable state-changing handlers rely on them and the storage layout is intended exact; that storage-variant finding is weaker, but still not mere style.
@@ -100,6 +102,7 @@ Follow the shared adversarial-agent rules in `shared-rules.md`. The primary targ
   - minter code that updates `total_supply` from a parsed nested cell before the downstream wallet mint path is confirmed, especially when bounced messages are ignored
   - mint or admin handlers that parse one field from `master_msg` or a similar nested ref but still forward the whole caller-supplied cell unchanged
   - mint or admin handlers that skip over the nested opcode tag and rely on later fields without ever asserting the nested message is the intended standard operation
+  - source-registry or verifier-registry relays where the signed/authenticated outer `verifier_id` can differ from the forwarded `deploy_source_item` `verifier_id`
   - `accept_message()` before replay protection is committed
   - balance or supply changes that rely on later success
   - short-form internal message prefixes serialized incorrectly

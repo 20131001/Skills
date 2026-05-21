@@ -119,6 +119,7 @@ Treat these as direct matches, not weak analogies:
 - nested selector dispatch such as `child_op` without rejecting unsupported values -> V46
 - a minter or other authoritative contract that commits `total_supply`, balance, liquidity, or entitlement before a dependent wallet-side mint / burn / `internal_transfer` is confirmed, and has no authoritative bounce reconciliation -> V32
 - a caller-supplied nested ref such as `master_msg` forwarded directly into a wallet or peer message without validating opcode, correlated amount, or exact schema -> V31
+- an authenticated relay/verifier/router path forwards a caller-supplied payload whose inner identity or domain field, such as `verifier_id`, owner, source, token master, or account id, can differ from the outer authenticated identity or domain -> V31
 - a privileged mint or admin path that parses fields from a nested peer-message body but never explicitly checks that the nested opcode matches the intended standard operation before forwarding it -> weaker V31
 
 For V25 specifically:
@@ -155,6 +156,7 @@ V22: path: recv_external() → admin_mint() | guard: owner check | verdict: DROP
 - Do not collapse V25 into another finding merely because the same parsed cell also participates in a different bug.
 - Do not collapse an asset-mode mismatch finding into an underfunded or ignored-error desync finding when one bug lets callers enter the wrong asset domain and the other explains why the downstream credit step can fail after state already moved.
 - Do not collapse V31 raw nested-message forwarding into V32 supply or settlement desync when the same mint or settlement handler has both.
+- For V31 authority-binding cases, follow the outbound message into any in-scope receiver and compare the outer authenticated principal or domain against the principal or domain fields the receiver persists or uses for addressing.
 - For weaker V31 cases, do not drop the finding solely because the missing check is only the nested opcode tag; if the body is still caller-influenced and forwarded or relied upon, keep it as a lower-confidence schema-validation finding.
 - For V25, broken message-shape integrity counts as a broken invariant. Do not demand a separate economic-loss proof if malformed trailing data is accepted on a fixed-layout parser that feeds authorization, state mutation, configuration, outbound message construction, or authoritative storage decoding.
 - For top-level storage-loader V25 cases such as `load_data()`, keep the finding as a lower-confidence parser-integrity / storage-layout risk when reachable state-changing handlers rely on that helper and the storage layout is intended exact.

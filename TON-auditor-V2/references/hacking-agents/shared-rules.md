@@ -50,7 +50,7 @@ Apply these rules to every TON audit agent bundle regardless of source language.
 - You may use any TON-specific reasoning path, including language-specific parser, storage, serialization, receiver, trait, optional, lazy-loading, and control-flow bugs.
 - Do not report style issues, centralization-by-design, or non-exploitable compatibility nits.
 - Apply the FP gate from `judging.md` immediately. If you cannot trace a concrete attacker path, drop the issue.
-- Deduplicate by root cause, preserving distinct parser-integrity, fallback-acceptance, raw nested-message forwarding, standards-mismatch, and optimistic accounting/supply-desync findings when their fixes differ.
+- Deduplicate by root cause, preserving distinct parser-integrity, fallback-acceptance, raw nested-message forwarding, `forwarded-identity-misbinding`, standards-mismatch, and optimistic accounting/supply-desync findings when their fixes differ.
 - Put high-signal risks with a concrete source location but incomplete impact path in `Review Trails`; do not include source-refuted paths.
 - Return exactly two sections: `Findings`, then `Review Trails`.
 - Under `Findings`, return only formatted finding blocks per `report-formatting.md`, or exactly `No findings.`
@@ -66,7 +66,7 @@ Apply these rules to every TON audit agent bundle regardless of source language.
 - Treat every nontrivial receiver, entrypoint, parser, helper, getter, storage map, send, bounce path, and business formula as independently auditable even when a broader invariant finding already exists.
 - For lifecycle items, trace create -> local action failure -> remote bounce -> success callback -> excess/callback -> timeout/no-response -> stale/unrelated message -> cleanup. Missing one terminal path is a concrete signal.
 - For lifecycle items, also test duplicate query ids and cross-flow query-id reuse. A stale pending sale, claim, unstake, mint, burn, tax, or withdrawal record can be security-relevant when a later unrelated bounce or callback can match it.
-- For parser and standards items, check exact layout, trailing bits/refs, optional tags, address forms, integer widths, opcode tags, getter tuple order, nested-cell schemas, Merkle/proof helpers, empty proof, single-leaf proof, two-leaf proof, and producer/consumer agreement across languages.
+- For parser and standards items, check exact layout, trailing bits/refs, optional tags, address forms, integer widths, opcode tags, getter tuple order, nested-cell schemas, forwarded payload identity/provenance binding, Merkle/proof helpers, empty proof, single-leaf proof, two-leaf proof, and producer/consumer agreement across languages.
 - For accounting and math items, test zero, one unit, equality at caps, cap plus one, non-divisible duration, final tranche, fee/tax active and inactive windows, failed split legs, quorum/threshold equality, denominator boundaries, decimal-scale conversion, and gross-booked vs net-received amounts for every protocol payout.
 - Mark checklist items as `finding` only when a complete reportable path exists. Mark them as `review_trail` when source-backed risk remains but one FP-gate element is unresolved. Mark them as `audited` only when the relevant guards or harmlessness proof are named in the note.
 - Do not let a global optimistic-accounting finding hide a distinct post-credit rejection, local ignored-send finality, remote bounce compensation gap, stale pending cleanup, mutable rollback, query-id correlation, cross-flow stale pending collision, helper edge case, tax/net-amount mismatch, protocol payout underpayment, or math/rounding issue.
@@ -79,6 +79,7 @@ Apply these rules to every TON audit agent bundle regardless of source language.
 - For each broad invariant issue, also inspect the receiver/helper-level edge that creates it. A global "optimistic accounting" finding does not cover a distinct late-rejection, stale-pending, tax/net-amount, or bounce-correlation bug when the fix must be applied in a different local path.
 - Partial execution is normal on TON; never assume a later contract action reverts an earlier committed state update.
 - Treat the inbound message envelope sender and value as the trusted transport context. Treat fields decoded from message bodies, nested cells, callbacks, and forwarded payloads as attacker-controlled until validated.
+- When a contract authenticates an outer identity, signer set, owner, verifier, code hash, source URL, child index, or source tuple and then forwards a caller-controlled payload, compare every equivalent or stronger inner field against that authenticated context. A downstream contract trusting the inner field does not inherit the outer proof unless the forwarder rebuilds it or proves equality.
 - Authenticate callbacks and peer messages by both expected sender and outstanding-request correlation.
 - In parent-child or factory-deployed contract groups, authenticate peers by recomputing the expected child/master/wallet address from trusted state, code, and index, or by checking stored peer state; do not trust body fields that name a parent or child.
 - Verify sender-wallet authenticity by deriving the expected wallet address from the trusted master and owner when handling Jetton or wallet-like callbacks.
@@ -97,7 +98,7 @@ Apply these rules to every TON audit agent bundle regardless of source language.
 - Apply TEP-derived vectors when a contract claims compatibility with a TEP, implements the relevant opcode/getter, or is consumed as that standard by wallets, marketplaces, explorers, bridges, indexers, or peer contracts.
 - Check opcodes, field order, field widths, address kinds, optional tags, referenced vs inline fields, getter tuple order, and response routing exactly against the claimed TON standard.
 - Require exact-layout proof for fixed-shape messages, storage, config, and nested payloads unless the design explicitly supports extensions. Each language agent defines the concrete API-level proof for its language.
-- Do not accept caller-supplied nested peer messages or wallet bodies unless the contract validates opcode, correlated amount, layout, destination, value, and send-mode semantics or rebuilds the message from trusted fields.
+- Do not accept caller-supplied nested peer messages or wallet bodies unless the contract validates opcode, correlated amount, layout, destination, value, identity/provenance fields, and send-mode semantics or rebuilds the message from trusted fields.
 - Preserve `query_id` or equivalent correlation identifiers across standard reply paths.
 - Prefer compact binary on-chain payloads over human-readable encodings. If string/comment/metadata parsing is unavoidable, bound it and perform it before state mutation or value acceptance.
 
@@ -135,6 +136,7 @@ Apply these rules to every TON audit agent bundle regardless of source language.
 - Preserve cross-flow stale pending collisions separately from generic pending-map storage growth.
 - Preserve language-specific root causes separately when the same TON-level flow is exposed through different language entrypoints or requires different code-local fixes.
 - Do not merge unvalidated nested-message forwarding into optimistic accounting or supply desync when both exist.
+- Do not merge `forwarded-identity-misbinding` into threshold-signature, zero-quorum, parser-integrity, generic raw-forwarding, or optimistic-accounting findings when the fix must bind inner payload fields to the authenticated outer context.
 - Do not merge a parser-integrity issue into an auth, mint, forwarding, or standards-mismatch finding unless the exploit path and local fix are identical.
 - If findings compound, keep the distinct root causes and mention the interaction once in the stronger finding when useful.
 

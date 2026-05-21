@@ -40,7 +40,7 @@ Use Review Trails for unresolved evidence, not for weaker findings.
 These fields are for audit orchestration and deduplication only. Do not require them in the final report unless `report-formatting.md` explicitly includes a table for them.
 
 - `ton_case_key`: `language | file | entrypoint-or-getter | case_family`.
-- `case_family`: a short TON-specific root-cause label such as `sender-auth`, `parser-integrity`, `tep-abi`, `optimistic-accounting`, `bounce-recovery`, `external-replay`, `state-layout`, `tact-receiver`, or `tolk-lazy-parser`.
+- `case_family`: a short TON-specific root-cause label such as `sender-auth`, `parser-integrity`, `tep-abi`, `forwarded-identity-misbinding`, `optimistic-accounting`, `bounce-recovery`, `external-replay`, `state-layout`, `tact-receiver`, or `tolk-lazy-parser`.
 - `evidence_trace`: a compact source-backed trace, for example `caller -> recv_internal -> op::transfer -> save_data -> send_raw_message`.
 - `unresolved_blocker`: the exact missing validation step that prevents a Review Trail from becoming a finding.
 
@@ -60,6 +60,7 @@ The following code-level anti-patterns are not mere style issues. If caller-cont
 - an owner/admin withdrawal or rescue path that uses gross balance instead of free balance after reserved or unclaimed obligations
 - authoritative supply or settlement state committed before a dependent wallet-side mint, burn, or transfer consequence is confirmed, with no authoritative bounce recovery
 - a caller-supplied nested internal message ref/body/cell such as `master_msg` forwarded to a wallet or peer contract without validating opcode, correlated amount, or exact schema
+- a forwarder, verifier, factory, or registry authorizes one identity or source tuple in an outer envelope, signature, config, or sender check, but forwards or stores a nested payload where a verifier id, owner, parent/child id, code hash, source URL/content, amount, destination, or storage key can differ and is not rebuilt from or checked equal to the authenticated outer context
 - a manual commit checkpoint that persists partially validated business state before later fallible parsing, reserve, or send work
 - a standard-facing Tact field, Tolk typed field, or custom codec that cannot represent `addr_none`, optional tags, references, or the exact integer width/coin encoding required by the claimed ABI
 - a fallback receiver that accepts unsupported value-bearing protocol messages without explicit rejection, refund, or safe no-op proof
@@ -110,6 +111,8 @@ For the nested-message forwarding pattern, it is enough to show that the forward
 
 If the missing proof is only an explicit nested opcode check on a caller-influenced peer-message body, keep it as a weaker surviving finding when the contract still forwards that body into another contract or relies on its parsed fields. That subcase can score below the normal threshold, but it should not be dropped merely because the caller is privileged or because the stronger downstream exploit depends on additional conditions.
 
+For `forwarded-identity-misbinding`, it is enough to show that the outer authorization proves principal or tuple `A` while the forwarded or stored inner payload can assert principal or tuple `B`, and the downstream contract trusts `B` for attribution, storage keying, address derivation, source publication, ownership, or another security-relevant state. Do not require compromise of the real `B` principal; spoofed attribution, fraudulent standard metadata/source publication, or deployment/update under `B` is concrete impact when the path is reachable.
+
 For manual `commit()` findings, it is enough to show that a reachable path commits business state or queued actions before a later operation can throw and that the committed checkpoint violates accounting, authorization, replay, or message-flow invariants after the failure.
 
 For Tact/Tolk typed ABI-shape findings, it is enough to show the contract claims or depends on a standard/peer schema and the Tact/Tolk type, field order, optional tag, custom codec, or serialization annotation cannot encode or decode the legal on-chain shape. Closed-system custom ABIs reduce or remove reportability only when every participant is proven to use the same custom shape.
@@ -145,6 +148,7 @@ Default confidence threshold: **75**
 - Do not merge distinct code-level root causes merely because they appear in the same function, parse the same message, or participate in the same business flow.
 - Preserve separate findings when the exploit mechanism or fix is different.
   Example: payload-derived sender authorization, missing exact-layout proof on a fixed-layout nested parser, and forwarding an unvalidated nested message cell are distinct root causes even if they occur in one handler.
+  Example: zero-quorum threshold bypass and forwarded verifier-id misbinding are distinct when the first fix rejects invalid verifier settings and the second fix rebuilds or compares the forwarded source-registry `verifier_id` against the authenticated outer verifier id.
   Example: a native-mode asset-configuration bypass and an optimistic ignored-error downstream credit desync are distinct root causes even if both occur in the same liquidity handler.
   Example: unvalidated forwarding of a caller-supplied nested `master_msg` and minter-side `total_supply` desync after wallet-side mint failure are distinct root causes even if both occur in the same `op::mint` handler.
   Example: a purchase receiver that traps inbound USDT on late validation and a later TYR payout path that finalizes accounting before delivery are distinct root causes even if both affect the same sale.
@@ -158,6 +162,7 @@ Default confidence threshold: **75**
 - For FC4-style shadowing findings, the concrete path is: caller reaches a handler -> local variable, tuple component, or helper parameter shadows an authoritative storage field -> validation or `save_data()` uses the wrong value -> authorization, ownership, balance, config, or phase state is corrupted.
 - For FC5/TL2/TA2-style ignored-result findings, the concrete path is: caller reaches a handler -> dictionary/storage/helper/system operation fails or returns null/none/false -> code ignores that result -> stale, absent, or unmodified data feeds authorization, accounting, state, or outbound messages.
 - For TP-style TEP standard findings, the concrete path is: caller, wallet, marketplace, indexer, or peer contract interacts through an advertised or de facto TEP interface -> implementation violates the TEP's opcode, getter, sender, funding, reply, optional-field, or serialization requirement -> value, ownership, attribution, discovery, metadata, or trace identity becomes wrong, locked, spoofable, or unrecoverable.
+- For `forwarded-identity-misbinding` findings, the concrete path is: caller reaches a forwarder, registry, verifier, or factory entrypoint -> code authenticates an outer sender/signature/config identity or source tuple -> caller-controlled nested payload carries a different inner verifier/owner/parent/code/source identity -> downstream contract trusts the inner value for state, address derivation, attribution, or publication.
 - For FC6/TL3/TA3-style parser-integrity findings, the concrete path is: caller reaches a fixed-layout parser or typed decoder -> contract accepts malformed or trailing data without proving full consumption -> decoded values still influence authorization, state, configuration, or outbound message behavior. Do not require a second downstream exploit gadget before reporting it.
 - For storage-variant FC6/TL3/TA3 findings, the concrete path is: caller reaches a state-changing handler -> handler relies on an authoritative fixed-layout storage parser or typed storage decoder -> parser silently accepts extra serialized trailing data or refs without proving exact layout. This is weaker than a caller-message parser break, but still reportable as a parser-integrity / storage-layout risk.
 - For FC8/TL5/TA5-style fallthrough findings, the concrete path is: caller reaches a handled branch, receiver, router case, or opcode path -> intended work completes -> control continues into a later default/error/conflicting branch -> state, sends, replay protection, or availability is broken.

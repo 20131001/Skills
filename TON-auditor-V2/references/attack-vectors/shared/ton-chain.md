@@ -126,8 +126,8 @@ These vectors apply across FunC, Tolk, and Tact because the root cause comes fro
 
 **TC25. Forwarding Unvalidated Raw Internal Messages**
 
-- **D:** Forwarding caller-supplied message cells without rebuilding or validating opcode, amount, destination, value, layout, and send-mode semantics lets attackers smuggle unsafe downstream actions.
-- **FP:** The outbound message is rebuilt from trusted fields or fully validated before send.
+- **D:** Forwarding caller-supplied message cells without rebuilding or validating opcode, amount, destination, value, layout, send-mode semantics, and identity/provenance fields lets attackers smuggle unsafe downstream actions or claim a different principal than the one authenticated by the outer request.
+- **FP:** The outbound message is rebuilt from trusted fields, or every forwarded field that affects authority, attribution, storage keys, code/source identity, child address derivation, or downstream state is fully validated against the authenticated outer context before send.
 
 **TC26. Cross-Contract Accounting or Supply Desync in Multi-Step Settlement**
 

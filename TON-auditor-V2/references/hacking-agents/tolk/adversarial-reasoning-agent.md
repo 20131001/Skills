@@ -47,8 +47,9 @@ Follow the shared adversarial-agent rules in `shared-rules.md`. The primary targ
    - wrong wallet derivation or standard getter ABI
    - unsupported opcode/selector acceptance
    - TEP opcode, getter, response, optional-field, excess, and metadata conformance failures
+   - `forwarded-identity-misbinding` where an outer authenticated verifier, owner, source tuple, child id, or code hash differs from an inner forwarded payload field trusted by the downstream contract
 5. Run an entrypoint/helper coverage pass before final output. For each nontrivial Tolk handler, router branch, lazy field access, storage helper, parser/codec, getter, send helper, or callback path, ask whether it has one of these local root causes even if a broader invariant finding already exists: post-credit rejection, local ignored-send finality, remote bounce compensation gap, stale pending cleanup, cross-flow pending collision, mutable rollback, query-id/correlation confusion, parser/helper edge case, tax/net-amount mismatch, protocol payout underpayment, and math/rounding boundary error.
-6. Preserve distinct parser-integrity, raw nested-message forwarding, late-validation fund lock, stale pending lifecycle, tax/net-amount mismatch, business-math boundary, and optimistic accounting/supply desync findings when their fixes differ.
+6. Preserve distinct parser-integrity, raw nested-message forwarding, `forwarded-identity-misbinding`, late-validation fund lock, stale pending lifecycle, tax/net-amount mismatch, business-math boundary, and optimistic accounting/supply desync findings when their fixes differ.
 
 ## Output Rules
 

@@ -149,6 +149,7 @@ Treat these as direct high-signal bugs unless a real guard defeats them:
 - optimistic liquidity, balance, or entitlement mutation before a dependent ignored-error downstream credit or deployment send
 - native-only or jetton-only handlers that never verify the configured asset mode or sentinel before crediting value in that mode
 - verifier-set or multisig authorization that never proves the required number of unique valid signers, or iterates the signature container incorrectly
+- signature-gated verifier or relay paths where attacker-controlled registration/configuration can set the required signature threshold to zero
 - a state or serialization helper call that passes adjacent same-typed arguments in a different order from the helper signature
 - a discovery or wallet getter path that derives the wrong wallet type or uses a different derivation formula from the contract's own canonical getter
 - a value-bearing deposit or `transfer_notification` path that accepts or credits user assets before a swallowed failure path with no refund or rollback
@@ -156,6 +157,7 @@ Treat these as direct high-signal bugs unless a real guard defeats them:
 - selector sub-dispatch that accepts unsupported `child_op`-style values without reverting
 - authoritative supply or settlement state committed before a dependent wallet-side mint, burn, or `internal_transfer` is known to have succeeded, with no authoritative bounce recovery
 - a caller-supplied nested message ref such as `master_msg` forwarded directly into a wallet or peer message after only partial parsing
+- an authenticated relay/verifier/router forwards a caller-supplied payload whose inner identity or domain field, such as `verifier_id`, owner, source, token master, or account id, is not rebuilt from or compared against the authenticated outer identity or domain
 - a privileged mint or admin path that parses a nested peer-message body but never explicitly verifies the nested opcode before relying on or forwarding that body
 
 For fixed-layout missing-`end_parse()` cases:
@@ -178,6 +180,7 @@ Be especially suspicious of:
 - native-liquidity or jetton-liquidity paths that share one pool variable but never verify the active asset-mode configuration before crediting providers
 - state updates saved before `SEND_MODE_IGNORE_ERRORS` consequence messages that are supposed to mirror those updates in per-user helper accounts
 - verifier loops that stop on `slice_refs_empty?()` or similar ref conditions without actually advancing to the next ref, or that never enforce a threshold / uniqueness condition after recovering signers
+- public verifier registration or update paths that allow zero-quorum forwarding on a path that is treated as signed verifier authorization
 - large `save_data(...)` or `store_*` call sites where neighboring ints or addresses appear swapped relative to the helper signature
 - outer `catch` blocks or silent `return` paths around swap / deposit handlers where the asset has already been credited and the failure path does not refund or reverse the balance update
 - “refund remaining” or rescue handlers that compare against total token balance but ignore `totalUnclaimed`, reserved inventory, or similar claim buckets
@@ -188,6 +191,7 @@ Be especially suspicious of:
 - minter code that updates `total_supply` from a parsed nested cell before the downstream wallet mint path is confirmed, especially when bounced messages are ignored
 - mint or admin handlers that parse one field from `master_msg` or a similar nested ref but still forward the whole caller-supplied cell unchanged
 - mint or admin handlers that skip over the nested opcode tag and rely on later fields without asserting the nested message is the intended standard operation
+- relay or registry handlers that authenticate one verifier, owner, source, or domain in an outer envelope, then let the forwarded body claim a different verifier, owner, source, or domain used by the receiver
 - `accept_message()` before replay protection is committed
 - balance or supply changes that rely on later success
 - short-form internal message prefixes serialized incorrectly
