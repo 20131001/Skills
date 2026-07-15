@@ -24,6 +24,10 @@ You are the orchestrator of a parallelized TON smart contract security audit.
 **Flags:**
 
 - `--file-output` (off by default): also write the final report to a markdown file using the path rule from `{resolved_path}/report-formatting.md`. Without this flag, print the report only in the terminal.
+- `--model <model-id>` or `--model=<model-id>`: use the exact user-selected model for every spawned audit, coverage, and retry agent. If omitted, use the automatic model-selection rule below.
+- `--reasoning-effort <value>` or `--reasoning-effort=<value>`: use the exact user-selected reasoning effort for every spawned audit, coverage, and retry agent. Accept values supported by the active runtime, such as `low`, `medium`, `high`, or `xhigh`. If omitted, keep the role defaults below.
+
+Parse flags independently of mode and filenames, so they may appear in any order. A value consumed by `--model` or `--reasoning-effort` is not a filename. Preserve model IDs and reasoning-effort values exactly as supplied; do not lowercase, rewrite, or guess aliases. If a flag is repeated, the last value wins. If either flag has no value, stop before discovery and report the malformed invocation.
 
 ## Bundle Write Discipline
 
@@ -105,7 +109,7 @@ Before writing bundles, compute `{optional_reference_files}` as existing files f
 
 Sort `{optional_reference_files}` by path. Missing optional files should not fail the audit.
 
-Create `{bundle_dir}/results/` for captured agent outputs. Create `{bundle_dir}/agent-manifest.md` after bundle generation. The manifest is part of the orchestration contract and must include one row per planned agent with: `agent_slug`, `role`, `language`, `bundle_path`, `assigned_vector_or_family`, `line_count`, `required_sections`, `expected_result_path`, `status=pending`, `spawn_id`, `started_at`, `completed_at`, `retry_count`, `captured_from`, `result_sha256`, `section_check`, `vector_count_check`, and `coverage_count_check`. Use deterministic slugs: `{language}-vector-{N}`, `{language}-adversarial`, `{language}-coverage-{family}`.
+Create `{bundle_dir}/results/` for captured agent outputs. Create `{bundle_dir}/agent-manifest.md` after bundle generation. The manifest is part of the orchestration contract and must include one row per planned agent with: `agent_slug`, `role`, `language`, `bundle_path`, `assigned_vector_or_family`, `line_count`, `model`, `reasoning_effort`, `required_sections`, `expected_result_path`, `status=pending`, `spawn_id`, `started_at`, `completed_at`, `retry_count`, `captured_from`, `result_sha256`, `section_check`, `vector_count_check`, and `coverage_count_check`. Use deterministic slugs: `{language}-vector-{N}`, `{language}-adversarial`, `{language}-coverage-{family}`. Record `model=inherit` when the spawn omits the model field.
 
 Known-finding regression baseline:
 
@@ -206,16 +210,26 @@ Agent orchestration rules:
 
 **Model selection:**
 
-- Prefer the strongest available local/runtime model for all audit agents.
-- If the agent tool or runtime exposes a model list or current best-model setting, choose the highest-capability coding/reasoning model available.
-- If the runtime does not expose a queryable model list, omit the `model` field when spawning agents so they inherit the current session's preferred model.
+- Resolve spawn configuration once before creating the manifest and use the same resolution for initial agents and retries.
+- Model precedence: explicit `--model` value, then the strongest available local/runtime model, then inheritance from the current session.
+- When `--model` is present, pass its exact value in the agent call's `model` field. Do not replace it with a preferred model. If the runtime exposes supported models, validate the value before spawning; if it is unavailable or rejected, stop and report the unsupported value instead of silently falling back.
+- When `--model` is absent, prefer the highest-capability coding/reasoning model exposed by the runtime. If the runtime does not expose a queryable model list or best-model setting, omit the `model` field so agents inherit the current session's preferred model.
 - Do not hard-code model names in this skill. Hard-coded model names can become stale or force a weaker model than the user's local runtime supports.
-- Keep `reasoning_effort: "medium"` for vector agents by default, and `reasoning_effort: "high"` for adversarial agents in `deep` mode unless the user asks for faster or cheaper execution.
+- Reasoning-effort precedence: explicit `--reasoning-effort` value, then the role default. Role defaults are `medium` for vector agents and `high` for adversarial and coverage agents.
+- When `--reasoning-effort` is present, pass its exact value in every agent call's `reasoning_effort` field. If the runtime exposes supported effort values, validate before spawning; if the value is unavailable or rejected, stop and report it instead of silently changing the effort.
+- If the agent tool does not expose a requested `model` or `reasoning_effort` field, stop before spawning and explain that the active runtime cannot honor the requested override. Do not claim that an override was applied when it was only included in the text prompt.
+
+Examples:
+
+```text
+run TON auditor deep --model YOUR_MODEL_ID --reasoning-effort xhigh
+run TON auditor contracts/token.fc --reasoning-effort=high --file-output
+```
 
 **Vector agents:**
 
 - Spawn one vector agent per `{language}-agent-N-bundle.md`.
-- Use the model selection rule above with `reasoning_effort: "medium"`.
+- Use the resolved model selection above. Set `reasoning_effort` to the explicit override when provided; otherwise use `medium`.
 - Prompt template:
 
 ```text
@@ -233,7 +247,7 @@ Then output Review Trails with high-signal unresolved trails, or `None.`.
 **Adversarial reasoning agents (`deep` mode only):**
 
 - Spawn one additional adversarial agent per detected language.
-- Use the model selection rule above with `reasoning_effort: "high"`.
+- Use the resolved model selection above. Set `reasoning_effort` to the explicit override when provided; otherwise use `high`.
 - Prompt template:
 
 ```text
@@ -252,7 +266,7 @@ Do not output a full report wrapper.
 **Coverage agents:**
 
 - Spawn one coverage agent per coverage bundle listed in `{bundle_dir}/agent-manifest.md`.
-- Use the model selection rule above with `reasoning_effort: "high"`.
+- Use the resolved model selection above. Set `reasoning_effort` to the explicit override when provided; otherwise use `high`.
 - Coverage agents are not vector-limited. Their job is to catch issues missed by vector partitioning and to verify that broad audits did not stop at high-level invariants.
 - Prompt template:
 
