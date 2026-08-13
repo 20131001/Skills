@@ -1,34 +1,10 @@
 # Report Formatting
 
-Use this file as the formatting contract for final audit output.
-
-## Inputs
-
-- the audited scope
-- the merged confirmed findings
-- the confidence threshold from `judging.md`
-
-## Goal
-
-Produce one consistent audit report shape so findings from different agents can be merged without reformatting drift.
-
-## Output Contract
-
-- print one terminal-ready final report, or
-- write the same report shape to the findings directory when `--file-output` is explicitly enabled
-
 ## Report Path
 
-Save the report to:
+Save the report to `assets/findings/{project-name}-ai-audit-report-{timestamp}.md` where `{project-name}` is the repo root basename and `{timestamp}` is `YYYYMMDD-HHMMSS` at scan time.
 
-`assets/findings/{project-name}-ai-audit-report-{timestamp}.md`
-
-Where:
-
-- `{project-name}` is the repo root basename
-- `{timestamp}` is `YYYYMMDD-HHMMSS` at scan time
-
-## Output Template
+## Output Format
 
 ````
 # 🔐 Security Review — <ContractName or repo name>
@@ -40,8 +16,19 @@ Where:
 |                                  |                                                        |
 | -------------------------------- | ------------------------------------------------------ |
 | **Mode**                         | ALL / default / deep / filename                        |
-| **Files reviewed**               | `file1.fc` · `file2.fc`<br>`file3.fc` · `file4.fc`     | <!-- list every file, 3 per line -->
+| **Files reviewed**               | `file1.fc` · `file2.tolk`<br>`file3.tact` · `file4.func` | <!-- list every file, 3 per line -->
 | **Confidence threshold (1-100)** | N                                                      |
+
+---
+
+## Checklist Coverage
+
+| Source | Applicable | Audited / satisfied | Findings | Review trails | Not applicable | Missing evidence |
+|---|---:|---:|---:|---:|---:|---:|
+| PositiveSecurity TON audit guide | N | N | N | N | N | N |
+| Sanbir hacking agents | N | N | N | N | N | N |
+
+List every `missing_evidence` item below with its stable source ID and the absent artifact/test/control. Omit the list when none are missing.
 
 ---
 
@@ -93,13 +80,18 @@ Findings List
 
 ---
 
-> ⚠️ This review was performed by an AI assistant. AI analysis can never verify the complete absence of vulnerabilities and no guarantee of security is given. Team security reviews, bug bounty programs, and on-chain monitoring are strongly recommended.
+## Review Trails
+
+| Trail | Location | Case family | Evidence trace | Unresolved blocker |
+|---|---|---|---|---|
+| RT-1 | `Contract.function` | parser-integrity | caller -> receiver -> parser | impact requires unstated peer behavior |
+
+---
+
+> ⚠️ This review was performed by an AI assistant. AI analysis can never verify the complete absence of vulnerabilities and no guarantee of security is given. Team security reviews, bug bounty programs, and on-chain monitoring are strongly recommended. 
+
 ````
 
-## Rules
+**Rules:** Follow the template above exactly. Sort findings by confidence (highest first). Findings below the threshold get a description but no **Fix** block. Draft findings directly in report format and use TON plus the applicable FunC, Tolk, or Tact terminology. Build Checklist Coverage from captured `SRC-CHECK:` rows; never infer full coverage from vector counts alone.
 
-- Follow the template above exactly.
-- Sort findings by confidence, highest first.
-- Findings below the threshold must still appear in the report and in the findings list; they get a `Description` but no `Fix` block.
-- Draft findings directly in report format.
-- Keep FunC / TON terminology.
+Review Trails are not findings. Use them only for unresolved, source-backed evidence that was not refuted but did not meet every reportable finding gate. Omit the `Review Trails` section when there are no trails. Never put a concrete source-refuted issue in Review Trails.
