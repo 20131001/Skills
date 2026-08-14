@@ -1,40 +1,49 @@
 # TON Auditor
 
-A parallel TON smart-contract security audit skill for FunC, Tolk, and Tact codebases.
+A security agent for **TON smart contracts written in Tolk, FunC, or Tact**.
 
-It is built for:
+Attribution: this fork keeps the packaging and audit workflow lineage from [pashov/skills](https://github.com/pashov/skills), adapted for TON contracts.
 
-- TON developers who want a security pass before shipping contract changes.
-- Auditors who want vector-constrained coverage plus optional free-form adversarial review.
-- Teams working with Jettons, NFTs, wallets, multisigs, message cascades, bounce handling, external messages, gas, and serialization-heavy FunC, Tolk, or Tact logic.
+Built for:
 
-This is not a substitute for a formal audit. It is a high-signal review workflow that helps find concrete, attacker-reachable issues quickly.
+- **TON developers** who want fast feedback before shipping Tolk, FunC, or Tact changes
+- **Security researchers** who need a first pass over handlers, sends, and bounce flows
+- **Auditors** who want broad vector coverage before deeper manual review
+
+It is not a substitute for a full audit. It is the fast pass you should run before you trust a contract system.
 
 ## Usage
 
-```text
-run TON auditor
+```bash
+/ton-auditor
+/ton-auditor --deep
+/ton-auditor contracts/vault.fc contracts/router.tact
+/ton-auditor contracts/vault.tolk
+/ton-auditor --file-output
+/ton-auditor --deep --model gpt-5
 ```
 
-```text
-run TON auditor deep
-```
+The skill defaults to the current ChatGPT/Codex model. Use `--model <model>` only when you want all audit agents to use a specific model supported by the runtime.
 
-```text
-run TON auditor contracts/token.fc contracts/router.tolk contracts/minter.tact --file-output
-```
+## Coverage
 
-## Modes
+- **167 attack vectors** tuned for TON-specific security review
+- **Parallel scan agents** for fast first-pass triage
+- **Deep mode** for adversarial reasoning and TON protocol analysis
 
-- Default scans all in-scope `.fc`, `.func`, `.tolk`, and `.tact` files.
-- `deep` adds one free-form adversarial reasoning agent per detected language.
-- Explicit filenames limit the audit to those files.
-- `--file-output` writes the final report under `assets/findings/`.
-- The orchestrator builds bundles as `TON shared rules + language-specific hacking agent + shared TON vectors + TEP standard vectors + target-language vectors`.
+## What It Looks For
+
+- unsafe external and internal message handling
+- bounced-message gaps and supply/accounting drift after failed sends
+- `accept_message()` misuse and gas draining vectors
+- send-mode mistakes that break later logic or strand value
+- Jetton sender / wallet validation bugs
+- replay / seqno mistakes
+- Tolk lazy loading, typed serialization, `BounceMode`, raw-message, and commit hazards
+- FunC storage packing/parsing hazards and Tact footguns
+- upgrade and code/data replacement mistakes
 
 ## Tips
 
-- Target the contracts you are actively changing when you need dense context and fast feedback.
-- In mixed-language projects, include every contract in the message cascade so language agents can reason over cross-contract TON flows.
-- Use `deep` for release candidates or when message-flow interactions are complex.
-- Run more than once on high-value contracts; independent passes can surface different exploit paths.
+- **Audit recv handlers, bounce handlers, and send sites first.** Those functions usually contain the real TON trust boundaries.
+- **Use `--deep` for Jetton, vault, bridge, escrow, and governance systems.** Async inter-contract flows are where the highest-impact TON bugs usually hide.

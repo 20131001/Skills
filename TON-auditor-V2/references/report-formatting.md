@@ -2,7 +2,7 @@
 
 ## Report Path
 
-Save the report to `assets/findings/{project-name}-ai-audit-report-{timestamp}.md` where `{project-name}` is the repo root basename and `{timestamp}` is `YYYYMMDD-HHMMSS` at scan time.
+Save the report to `assets/findings/{project-name}-ton-ai-audit-report-{timestamp}.md` where `{project-name}` is the repo root basename and `{timestamp}` is `YYYYMMDD-HHMMSS` at scan time.
 
 ## Output Format
 
@@ -15,8 +15,9 @@ Save the report to `assets/findings/{project-name}-ai-audit-report-{timestamp}.m
 
 |                                  |                                                        |
 | -------------------------------- | ------------------------------------------------------ |
-| **Mode**                         | ALL / default / deep / filename                        |
-| **Files reviewed**               | `file1.fc` · `file2.tolk`<br>`file3.tact` · `file4.func` | <!-- list every file, 3 per line -->
+| **Mode**                         | ALL / default / filename                               |
+| **Language**                     | FunC / Tact / Mixed                                    |
+| **Files reviewed**               | `File1.fc` · `File2.fc`<br>`File3.tact` · `File4.fc`  | <!-- list every file, 3 per line -->
 | **Confidence threshold (1-100)** | N                                                      |
 
 ---
@@ -25,7 +26,7 @@ Save the report to `assets/findings/{project-name}-ai-audit-report-{timestamp}.m
 
 [95] **1. <Title>**
 
-`ContractName.functionName` · Confidence: 95
+`contract::handler` · Confidence: 95
 
 **Description**
 <The vulnerable code pattern and why it is exploitable, in 1 short sentence>
@@ -40,7 +41,7 @@ Save the report to `assets/findings/{project-name}-ai-audit-report-{timestamp}.m
 
 [82] **2. <Title>**
 
-`ContractName.functionName` · Confidence: 82
+`contract::handler` · Confidence: 82
 
 **Description**
 <The vulnerable code pattern and why it is exploitable, in 1 short sentence>
@@ -53,7 +54,20 @@ Save the report to `assets/findings/{project-name}-ai-audit-report-{timestamp}.m
 ```
 ---
 
-< ... all findings >
+< ... all above-threshold findings >
+
+---
+
+[75] **3. <Title>**
+
+`contract::handler` · Confidence: 75
+
+**Description**
+<The vulnerable code pattern and why it is exploitable, in 1 short sentence>
+
+---
+
+< ... all below-threshold findings (description only, no Fix block) >
 
 ---
 
@@ -63,24 +77,21 @@ Findings List
 |---|---|---|
 | 1 | [95] | <title> |
 | 2 | [82] | <title> |
-| | | **Below Confidence Threshold** |
 | 3 | [75] | <title> |
-| 4 | [60] | <title> |
 
 ---
 
-## Review Trails
+## Leads
 
-| Trail | Location | Case family | Evidence trace | Unresolved blocker |
-|---|---|---|---|---|
-| RT-1 | `Contract.function` | parser-integrity | caller -> receiver -> parser | impact requires unstated peer behavior |
+_Vulnerability trails with concrete code smells where the full exploit path could not be completed in one analysis pass. These are not false positives — they are high-signal leads for manual review. Not scored._
+
+- **<Title>** — `Contract::handler` — Code smells: <missing guard, unsafe arithmetic, etc.> — <1-2 sentence description of the trail and what remains unverified>
+- **<Title>** — `Contract::handler` — Code smells: <...> — <1-2 sentence description>
 
 ---
 
-> ⚠️ This review was performed by an AI assistant. AI analysis can never verify the complete absence of vulnerabilities and no guarantee of security is given. Team security reviews, bug bounty programs, and on-chain monitoring are strongly recommended. 
+> ⚠️ This review was performed by an AI assistant. AI analysis can never verify the complete absence of vulnerabilities and no guarantee of security is given. Team security reviews, bug bounty programs, and on-chain monitoring are strongly recommended.
 
 ````
 
-**Rules:** Follow the template above exactly. Sort findings by confidence (highest first). Findings below the threshold get a description but no **Fix** block. Draft findings directly in report format and use TON plus the applicable FunC, Tolk, or Tact terminology.
-
-Review Trails are not findings. Use them only for unresolved, source-backed evidence that was not refuted but did not meet every reportable finding gate. Omit the `Review Trails` section when there are no trails. Never put a concrete source-refuted issue in Review Trails.
+**Rules:** Follow the template above exactly. Sort findings by confidence (highest first). Findings below the threshold get a description but no **Fix** block. Draft findings directly in report format — do not re-generate.

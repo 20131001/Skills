@@ -1,8 +1,10 @@
 # Findings
 
-This directory holds audit output and supporting report material:
+**⚠️ Work in Progress — this feature is not ready yet.**
 
-- **Reports from `/TON-auditor` runs** - written as `{project-name}-ai-audit-report-{timestamp}.md` when the skill is run with `--file-output`.
-- **External audit reports** - optional third-party or manual audit `.md` files kept with the skill for operator reference.
+This directory holds two kinds of reports:
 
-Current orchestration does not automatically re-verify every historical report in this directory. Treat these files as saved outputs or manually supplied context unless historical finding replay is explicitly added later.
+- **Reports from previous `/solidity-auditor` runs** — written automatically as `{project-name}-pashov-ai-audit-report-{timestamp}.md` each time the skill runs.
+- **External audit reports** — drop any third-party or manual audit `.md` files here.
+
+On each run the skill reads every file in this directory and re-verifies whether previously reported issues still exist in the current code. Issues still present are carried forward with a "Previously reported — still present" note. Issues that are no longer present are silently skipped.
