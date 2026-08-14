@@ -27,7 +27,7 @@ The skill defaults to the current ChatGPT/Codex model. Use `--model <model>` onl
 
 ## Coverage
 
-- **167 attack vectors** tuned for TON-specific security review
+- **176 attack vectors** tuned for TON-specific security review
 - **Parallel scan agents** for fast first-pass triage
 - **Deep mode** for adversarial reasoning and TON protocol analysis
 

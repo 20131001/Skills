@@ -24,6 +24,8 @@ Other agents cover known patterns, math, state consistency, and economics. You b
 
 **Escalate privileges.** Find routes where changing the admin address leads to controlling other critical parameters. Chain admin operations: set admin → set config → drain funds.
 
+**Abuse irreversible privilege drops.** Trace every renounce, zero-admin, or finalization path. Prove it requires explicit intent and validates the final configuration, pending operations, emergency recovery, upgrades, and fee/fund recovery before authority is permanently removed.
+
 ## Output fields
 
 Add to FINDINGs:

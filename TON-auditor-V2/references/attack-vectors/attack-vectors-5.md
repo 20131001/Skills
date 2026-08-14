@@ -1,4 +1,4 @@
-# Attack Vectors Reference (5/6) — Tolk, Audit Completeness & Action Semantics
+# Attack Vectors Reference (5/7) — Tolk, Audit Completeness & Action Semantics
 
 ## V121 — Tolk Lazy Validation Bypass
 
@@ -8,6 +8,7 @@
 
 **What to look for:**
 - `lazy Union.fromSlice(...)` or lazy storage where authorization, amount, tag, or address fields are not read
+- `is` / `!is` checks on lazy unions treated as full validation even though only the opcode or variant prefix has been inspected
 - State writes, sends, or accepts before all critical lazy fields are accessed
 - Validation helpers that receive a lazy object but inspect only a subset of security fields
 
@@ -21,6 +22,7 @@
 
 **What to look for:**
 - Non-exhaustive `match` on a message union
+- `is` / `!is` used as proof that the complete selected variant body is well-formed
 - `else` branches that silently return, cashback, or continue into shared state logic
 - Duplicate opcode prefixes or incomplete bodies accepted through lazy parsing
 
@@ -54,12 +56,13 @@
 
 ## V125 — Unsafe Tolk Cast or Raw-Type Escape
 
-**What:** Untrusted `slice`, `cell`, `builder`, or `unknown` data is cast with `as` or otherwise treated as a typed value without structural proof.
+**What:** Untrusted `slice`, `cell`, `builder`, `unknown`, or arbitrary integer data is cast with `as` or otherwise treated as a typed value or enum variant without structural/range proof.
 
 **Why it matters:** The cast bypasses type safety and hides malformed tags, widths, refs, addresses, or payload layouts until after security decisions.
 
 **What to look for:**
 - `as` casts from attacker-controlled raw types
+- Integer-to-enum casts without checking that the value is a declared variant
 - `unknown`, `builder`, `slice`, or `cell` passed into privileged or financial logic
 - Nullable force unwrap (`!`) without a dominating null check
 
@@ -75,6 +78,7 @@
 - `Cell<T>` used for opaque or differently encoded data
 - Struct fields that do not match standard or legacy layouts
 - Inline-versus-ref assumptions that differ between compiler-generated and manual parsers
+- SnakeString helpers that fail to enforce one continuation ref, byte-aligned chunks, proper termination, and a bounded chain depth
 
 ---
 
@@ -86,6 +90,7 @@
 
 **What to look for:**
 - Addition/multiplication before assignment to sized serialized fields
+- Assuming `coins` remains range-safe after multiplication or division; only `+` and `-` preserve the `coins` type, so derived integers need explicit nonnegative and 120-bit bounds before casting or writing
 - Missing upper bounds before storage or message serialization
 - Financial accumulators whose runtime range exceeds their declared encoded width
 
@@ -205,6 +210,7 @@
 - Reserve actions not inventoried with sends
 - Exact/all-except/at-most modes used without insufficient-balance tests
 - Reserve ordering or bounce-on-fail behavior inconsistent with later action assumptions
+- Multiple mode-64 sends or post-refund log/notification actions that assume each action can reuse the same remaining inbound value
 
 ---
 
@@ -230,19 +236,20 @@
 **What to look for:**
 - Lookup by `query_id` followed directly by credit/refund/finalization
 - Missing sender/opcode/amount/pending-status checks
+- Missing comparison against the state version, snapshot, or hash captured when the pending operation was created
 - Unnecessarily global uniqueness or unsafe reuse within concurrent in-flight operations
 
 ---
 
 ## V139 — Hidden Privileged Entry Point
 
-**What:** Admin or state-changing logic is reachable through fallback, empty, bounced, deployment, upgrade, plugin, or callback paths that lack the primary handler's policy.
+**What:** Admin or state-changing logic is reachable through fallback, empty, bounced, deployment, upgrade, plugin, callback, tick-tock, or other system entry points that lack the primary handler's policy.
 
 **Why it matters:** Auditors may verify named admin opcodes while an alternate entry point invokes the same mutation without authorization.
 
 **What to look for:**
 - Shared helpers called from both authenticated and unauthenticated handlers
-- Empty/fallback/bounce branches that dispatch privileged opcodes
+- Empty/fallback/bounce, `onTickTock`, or other system branches that dispatch privileged logic
 - Upgrade/plugin callbacks that can replace code, data, fee receivers, or accounting
 
 ---

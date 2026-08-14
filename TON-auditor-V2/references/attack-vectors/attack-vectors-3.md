@@ -1,4 +1,4 @@
-# Attack Vectors Reference (3/6) — Arithmetic, Token Operations & State Management
+# Attack Vectors Reference (3/7) — Arithmetic, Token Operations & State Management
 
 ## V61 — Integer Overflow / Underflow
 

@@ -1,4 +1,4 @@
-# Attack Vectors Reference (2/6) — Asynchronous Execution, Concurrency & Contract Lifecycle
+# Attack Vectors Reference (2/7) — Asynchronous Execution, Concurrency & Contract Lifecycle
 
 ## V31 — Asynchronous Reentrancy via Message Chains
 
@@ -65,6 +65,7 @@
 - Callback handlers using values from the original call context
 - State not re-read from c4 in bounce/callback handlers
 - Assumptions that "nothing changed" between send and callback
+- Pending operations correlated only by query ID instead of sender, opcode, pending status, and a state snapshot/hash captured when the request was sent
 
 ---
 

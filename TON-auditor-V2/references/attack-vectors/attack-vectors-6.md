@@ -1,4 +1,4 @@
-# Attack Vectors Reference (6/6) — Language Semantics, Hidden State & Parsing
+# Attack Vectors Reference (6/7) — Language Semantics, Hidden State & Parsing
 
 ## V151 — Sensitive Data Exposure in On-Chain State or Messages
 
@@ -47,6 +47,7 @@
 
 **What to look for:**
 - Loops over arbitrary strings, snake cells, labels, delimiters, or numeric digits
+- SnakeString chains without exactly zero-or-one continuation ref per chunk, byte-aligned data, explicit termination, and a hard maximum depth/total byte length
 - Domain/path normalization performed on chain without canonicalization and hard bounds
 - Parsed human text used as an address, amount, identity, opcode, or authorization input
 

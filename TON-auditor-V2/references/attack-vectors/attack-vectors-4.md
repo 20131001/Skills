@@ -1,4 +1,4 @@
-# Attack Vectors Reference (4/6) — Oracle, DeFi, Jetton/NFT & Platform-Level
+# Attack Vectors Reference (4/7) — Oracle, DeFi, Jetton/NFT & Platform-Level
 
 ## V91 — Stale Oracle Price
 

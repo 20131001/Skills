@@ -18,6 +18,8 @@ Other agents cover known patterns, arithmetic, permissions, economics, invariant
 - **Opcode/schema collisions.** Build a map from every opcode to its exact TL-B body. Feed a body for one schema into every other handler, proxy, or upgraded contract reusing that opcode.
 - **Ignored helper outcomes.** Track dictionary/map mutation flags, optional lookups, parser results, and returned updated values. Exploit execution that continues with stale or fabricated state after failure.
 - **Branch fallthrough.** After every handled opcode/union/receiver branch, continue tracing. Find default throws, duplicate sends, or conflicting state writes reached because the branch did not terminate.
+- **Silent external-action failure.** Trace seqno update, commit, action construction, and every `try`/`catch`. Exploit empty or broad catches that consume replay state while silently dropping the signed action.
+- **C5 action-list injection.** For wallets, extensions, plugins, and proxies, decode every raw action-list cell. Reject unauthorized action opcodes/fields and malformed, cyclic, trailing, or excessively deep chains before commit.
 
 ## Across transactions (async message chains)
 
@@ -26,7 +28,7 @@ Other agents cover known patterns, arithmetic, permissions, economics, invariant
 - **Bounce handler gaps.** State changed on send, message bounces, bounce handler missing or incomplete. The contract is left in a state where it thinks the operation succeeded.
 - **`set_data()` / `set_code()` timing.** These take effect AFTER the current transaction completes successfully. If a transaction sends messages based on old state and updates state in the same tx, the messages use old state but the contract sees new state on the next message.
 - **Cross-message field manipulation.** In multi-leg operations (A→B→C), corrupt packed cell fields between legs. If B forwards part of A's message to C, manipulate the forwarded portion.
-- **Callback stale state.** Contract reads state, sends message, processes callback. Between send and callback, another message may have modified state. The callback handler uses stale cached values.
+- **Callback stale state.** Contract reads state, sends message, processes callback. Between send and callback, another message may have modified state. Bind completion to the current sender, opcode, pending status, amount, and the state snapshot/version/hash captured at send time—not query ID alone.
 - **Parent-child spoofing.** Replace a legitimate derived child/parent callback with an attacker contract carrying the same payload and query ID; verify the actual sender is recomputed from trusted StateInit.
 - **First-deployment failure.** Execute every deterministic counterparty flow when the wallet/child is still uninitialized; trace StateInit, funding, bounce, retry, and local state recovery.
 

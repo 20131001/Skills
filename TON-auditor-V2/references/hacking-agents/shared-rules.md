@@ -7,7 +7,7 @@ Your bundle has two sections:
 1. **Core source** (inline) — read in parallel chunks (offset + limit), compute offsets from the line count in your prompt.
 2. **Peripheral file manifest** — file paths under `# Peripheral Files (read on demand)`. Read only those relevant to your specialty.
 
-When matching function names in FunC, check both `function_name` and `_function_name` (underscore-prefixed internal helpers). In Tolk, inventory `onInternalMessage`, `onExternalMessage`, `onBouncedMessage`, getters, union branches, and methods. In Tact, check both `receive()` handlers and named functions.
+When matching function names in FunC, check both `function_name` and `_function_name` (underscore-prefixed internal helpers). In Tolk, inventory `onInternalMessage`, `onExternalMessage`, `onBouncedMessage`, `onTickTock`, getters, union branches, methods, and any other system entry points. In Tact, check both `receive()` handlers and named functions.
 
 ## Cross-contract patterns
 

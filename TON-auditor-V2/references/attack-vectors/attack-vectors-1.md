@@ -1,4 +1,4 @@
-# Attack Vectors Reference (1/6) — Message Handling, Authorization & Entry Points
+# Attack Vectors Reference (1/7) — Message Handling, Authorization & Entry Points
 
 ## V1 — Missing Sender Validation on `transfer_notification`
 
@@ -160,6 +160,8 @@ Using mode 128 with user input or mode 1 without validation can drain contracts.
 - Mode 1 with user-controlled amounts (contract pays gas)
 - Mode +2 (ignore errors) masking critical failures
 - Mode +32 accidentally destroying contracts
+- Multiple mode-64 sends in one transaction: only the first can carry the remaining inbound value; later sends may receive zero or spend the contract's balance
+- Logs, notifications, refunds, or other later actions that assume inbound value remains after an earlier mode-64 send
 - Missing mode flag on `send_raw_message` (defaults to 0)
 
 ---
@@ -179,14 +181,15 @@ Using mode 128 with user input or mode 1 without validation can drain contracts.
 
 ## V13 — Admin Address Not Updatable or Not Secured
 
-**What:** Admin/owner address is hardcoded at deployment with no transfer mechanism, or the transfer isn't two-step.
+**What:** Admin/owner address is hardcoded at deployment with no transfer mechanism, the transfer is not two-step, or privileges can be irreversibly dropped without proving the final configuration is safe.
 
-**Why it matters:** If the admin key is compromised or lost, there's no recovery. Single-step transfer risks sending admin to wrong address.
+**Why it matters:** If the admin key is compromised or lost, there is no recovery. Single-step transfer risks sending admin to the wrong address. An irreversible renounce can also freeze upgrades, fee recovery, emergency controls, or configuration in an unusable state.
 
 **What to look for:**
 - No `change_admin` or `transfer_ownership` operation
 - Direct admin address change without pending/confirm pattern
 - Admin address stored in code (not data) making it non-upgradeable
+- Renounce or zero-admin paths that do not validate the final configuration, recovery implications, and explicit caller intent
 
 ---
 
