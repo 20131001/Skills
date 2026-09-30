@@ -1,6 +1,8 @@
-# TON Auditor
+# TON Auditor V2
 
-A security agent for **TON smart contracts written in Tolk, FunC, or Tact**.
+A high-recall, evidence-preserving security audit skill for **TON smart contracts written in Tolk, FunC, or Tact**.
+
+Invoke this repository-root skill through `TON-auditor-V2/SKILL.md`. If a separately registered skill is available, check the loaded path before an audit.
 
 Attribution: this fork keeps the packaging and audit workflow lineage from [pashov/skills](https://github.com/pashov/skills), adapted for TON contracts.
 
@@ -14,13 +16,13 @@ It is not a substitute for a full audit. It is the fast pass you should run befo
 
 ## Usage
 
+Point the auditing agent at `TON-auditor-V2/SKILL.md`, then supply a
+scope such as:
+
 ```bash
-/ton-auditor
-/ton-auditor --deep
-/ton-auditor contracts/vault.fc contracts/router.tact
-/ton-auditor contracts/vault.tolk
-/ton-auditor --file-output
-/ton-auditor --deep --model gpt-5
+--deep
+contracts/vault.fc contracts/router.tact --deep
+--deep --file-output
 ```
 
 The skill defaults to the current ChatGPT/Codex model. Use `--model <model>` only when you want all audit agents to use a specific model supported by the runtime.
@@ -28,8 +30,10 @@ The skill defaults to the current ChatGPT/Codex model. Use `--model <model>` onl
 ## Coverage
 
 - **176 attack vectors** tuned for TON-specific security review
-- **Parallel scan agents** for fast first-pass triage
-- **Deep mode** for adversarial reasoning and TON protocol analysis
+- **Durable candidate ledger** that preserves findings, leads, rejections, and merges
+- **Independent specialist and contract-local passes** for broader discovery
+- **Source-derived async lifecycle probes** for callback, bounce, retry, and cleanup behavior
+- **Negative-space review** that revisits uncovered handlers and protocol edges
 
 ## What It Looks For
 

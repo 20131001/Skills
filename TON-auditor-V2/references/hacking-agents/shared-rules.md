@@ -15,6 +15,8 @@ When you find a bug in one contract, **weaponize that pattern across every other
 
 In TON, cross-contract interaction happens via asynchronous message chains, not function calls. Trace message flows: sender → `send_raw_message`/`createMessage(...).send(...)` → recipient's `recv_internal`/`onInternalMessage`. Follow the full A→B→C chain, checking each leg for validation gaps.
 
+Separate ordinary internal messages, external messages, and protocol-generated bounced messages. A normal sender cannot forge a bounced flag or call a bounced-only receiver merely by copying its body. For every bounce-authentication claim, identify the original outbound message, permitted destination, failure that creates the bounce, and actual bounce sender/body. Treat a missing explicit sender check as a lead until that provenance trace shows attacker control.
+
 After scanning: escalate every finding to its worst exploitable variant (DoS may hide fund theft). Then revisit every handler where you found something and attack the other branches.
 
 ## Do not report

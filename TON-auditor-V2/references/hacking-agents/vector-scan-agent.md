@@ -18,7 +18,7 @@ A guard only stops you if it blocks ALL paths. Find the way around:
 - Reach the same state through a handler without the guard
 - Feed input values that slip past `throw_unless`/`throw_if` checks
 - Exploit checks positioned after `send_raw_message` or `createMessage(...).send(...)` (too late — the action is already queued)
-- Enter through bounce handlers that skip validation
+- Enter through bounce handlers that skip validation only after proving a controllable, protocol-generated bounce reaches them; copying a bounce body into an ordinary message is insufficient
 - Exploit `recv_external`/`onExternalMessage` paths that call `accept_message()`/`acceptExternalMessage()` before validation
 
 ## Output gate

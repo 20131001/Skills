@@ -29,11 +29,11 @@ Other agents cover known patterns, logic/state, access control, and arithmetic. 
 
 **Weaponize legitimate features.** Use the protocol's own mechanisms against it: deposit to manipulate share prices, trigger intentional bounces to corrupt state, exploit `send_mode` combinations to redirect value.
 
-**Every finding needs concrete economics.** Show who profits, how much, at what cost. No numbers = LEAD.
+**Quantify economic claims.** For extraction, estimate attacker gain and cost. For user loss, locked funds, or insolvency, identify the affected balance or entitlement and give a bound when the source permits one. Missing arithmetic is a lead only when it prevents validation of the claimed impact; attacker profit is not required for a concrete loss.
 
 ## Output fields
 
 Add to FINDINGs:
 ```
-proof: concrete numbers showing profitability or fund loss
+proof: source-backed value flow, with concrete amounts or bounds when determinable
 ```
